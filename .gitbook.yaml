@@ -1,0 +1,5 @@
+# GitBook configuration for the public Bivium docs.
+# Files live at the repo root, so no `root:` is needed.
+structure:
+  readme: README.md
+  summary: SUMMARY.md
