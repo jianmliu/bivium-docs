@@ -116,9 +116,13 @@ Creating a market with a non-conforming token is unsafe and is the deployer's re
 Beyond the ERC-20 conformance above, the **economic** quality of the collateral is what the lender's short-put rests on
 (see adverse selection, above). The intended universe:
 
-- **Primary: BTC and ETH.** Deep, liquid, blue-chip, and — critically — **hedgeable on a continuous options market**
+- **Primary: BTC, then ETH.** Deep, liquid, blue-chip, and — critically — **hedgeable on a continuous options market**
   (Deribit for crypto; CME/IBIT increasingly in-band for BTC), so a solver can offset its assigned-put risk 1:1 and the
-  asset is not mintable/riggable by the borrower. These are the adverse-selection-*safe* collateral.
+  asset is not mintable/riggable by the borrower. These are the adverse-selection-*safe* collateral. BTC leads; ETH is
+  the second blue-chip.
+- **Long-tail / niche collateral is deliberately not supported.** Supporting it safely requires exactly the machinery
+  Bivium omits — a price-oracle suite, collateral-utility compartments, and token wrappers (the breadth design used by oracle-based, long-tail lenders). Bivium's scope is the opposite: **depth on one or two blue-chips, oracle-free.** A niche
+  asset can only ever be a bespoke/off-grid market at the curator's explicit risk.
 - **Wrapper choice matters.** Deribit/CME hedge in **native BTC**, but EVM collateral is necessarily a wrapped/vault
   token. Prefer **trustless-vault native BTC/ETH** (a Babylon/BitVM-style self-custodial vault) over custodial WBTC/cbBTC:
   this swaps *custodian-credit* depeg for smaller *bridge/challenge-window* risk. The vault's peg-out delay does **not**
