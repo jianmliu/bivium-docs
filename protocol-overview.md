@@ -63,8 +63,10 @@ and the risk is straightforward to price and hedge. The settlement window aligns
 
 ## How rates are set
 
-Price is expressed on a **tick grid** — a geometric ladder of 0.5% steps — and shown to you as an APR.
-Every order, human or automated, lands on the same ladder, so quotes are directly comparable.
+Price is expressed on a **logistic tick grid** and shown to you as an APR. Each tick moves by a fixed
+`ln(1.005)` step in log-odds space, giving roughly 0.5% relative resolution in the discount/rate near
+par; the maximum tick is pinned to par. Every order, human or automated, lands on the same ladder, so
+quotes are directly comparable.
 
 How a given market's rate is *justified* is pluggable, without changing the core:
 

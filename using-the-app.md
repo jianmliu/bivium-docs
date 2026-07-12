@@ -94,7 +94,8 @@ The **Positions** tab has two sub-tabs.
   assigned it. Lower floor = safer for the lender, cheaper protection for the borrower.
 - **Maturity** — the fixed end date. `repay` and new borrows are only valid *before* it; `claim` only *after*.
 - **Rate / APR / tick** — one number, shown as an APR. It's the fixed cost of the loan and the fixed yield to
-  the lender; under the hood it's a price on a geometric tick grid.
+  the lender; under the hood it's a price on a logistic tick grid with uniform log-odds steps, tuned for
+  fine discount/rate resolution near par.
 - **Repay-or-deliver** — the only settlement rule: a credit holder receives `min(face, collateral)` in kind. No
   oracle decides this; the borrower's repay/no-repay choice does.
 - **No liquidation** — there is no maintenance margin and no liquidator. Nothing happens mid-term regardless of
