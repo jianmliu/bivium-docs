@@ -62,8 +62,10 @@ making positions portable across chains or cores.
 The complete flat `Offer` is `chainId`, `bivium`, `loanToken`, `collateralToken`, `maturity`, `strike`,
 `allowPartialRepay`, `gate`, `maker`, `buy`, `tick`, `maxUnits`, `maxAssets`, `start`, `expiry`, `group`,
 and `ratifier`, in that order. Its eight-field prefix is the market identity. `tick` encodes the price
-on the core's grid; there is no separate price field. The full offer is hashed and signed, so changing
-any field, including the chain or core, changes its commitment.
+on the core's grid; there is no separate price field. The full tuple is always hashed as the ratification
+commitment, so changing any field, including the chain or core, changes it. Signature-based ratifiers
+verify a maker signature over that commitment; manager, curve, and other on-chain ratifiers can attest
+their policy without a maker signature.
 
 Bivium markets focus on liquid, blue-chip collateral — **BTC and ETH** — because that collateral is deep
 and the risk is straightforward to price and hedge. The settlement window aligns to the standard

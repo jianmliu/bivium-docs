@@ -30,25 +30,28 @@ but that is **not** a security guarantee.
   be altered, frozen, or drained by any privileged party — and a bug cannot be patched in place.
 - **No oracle.** Settlement depends only on whether a borrower repaid before maturity. There is no
   price feed to manipulate.
-- **No callbacks.** Unlike the order-book design it draws on, Bivium has no maker/taker callbacks, so
-  the reentrancy surface is minimal. All fund-moving entrypoints additionally carry a
-  `nonReentrant` guard (transient storage), and follow checks-effects-interactions (state is updated
-  before any external token transfer).
+- **Explicit callback and flash surfaces.** Callback-enabled variants of `fill`, `fund`, and `repay`
+  support defined integration interfaces, and the core also exposes ERC-3156 flash lending. The
+  reentrancy surface is bounded by those explicit interfaces, call ordering, reentrancy guards, and
+  accounting checks; it is not absent.
 - **Lender optionality.** Borrowers hold an economic option at maturity (repay or let the collateral
   be delivered). Lenders accept that a default yields collateral instead of loan tokens. This is a
   product outcome, not bad debt.
 
 ### Authorization & the fund-custody critical path
 
-Only the **core** holds funds. A component can put a user's funds at risk only two ways: (a) a bug in
-the core itself, or (b) being granted operator power by that user. The authorization model is built to
-keep everything else *off* that path:
+The **core** is the sole persistent custodian of market escrow and accounting balances. Periphery such
+as `IntentSettlementRouter` and `WethGateway` can pull, receive, or wrap assets transiently within an
+atomic call, but does not hold them as long-term market custody. A component can put a user's funds at
+risk through a core bug, a periphery bug while assets are in flight, or operator powers granted by the
+user. The authorization model limits those paths:
 
 - **Capability-scoped operators.** `grantAuthorization(operator, capabilities, expiry)` hands an
   operator only specific `CAP_*` bits (one per fund-moving function) and an optional expiry, instead of
-  full custody. The intent router receives `CAP_FILL` only; the WETH gateway receives only the fill and
-  collateral-withdrawal capabilities it needs.
-  each operator's blast radius is one function, not the user's whole balance. `setAuthorization(x, true)`
+  full custody. `IntentSettlementRouter` receives `CAP_FILL` only. `WethGateway` intentionally
+  needs `CAP_FILL` plus `CAP_WITHDRAW_COLLATERAL`; other operators should receive the minimum capability
+  set for their workflows. An operator's blast radius is limited to its granted capabilities, expiry,
+  and the checks on those actions. `setAuthorization(x, true)`
   remains as the explicit full-custody grant (`ALL_CAPS`, no expiry) — use it only for fully trusted
   accounts.
 - **Ratifiers carry no fund power.** Naming a `ratifier` is a *separate* registry (`setRatifier` /
@@ -72,9 +75,11 @@ by the intent router and WETH gateway.
 
 Every market is identified by exactly `(chainId, bivium, loanToken, collateralToken, maturity, strike,
 allowPartialRepay, gate)`, where `bivium` is the intended core address. An offer repeats those eight
-fields as its prefix, and the full flat offer is hashed for ratification. Changing either the chain or
-core therefore changes both the market ID and offer commitment. Operating a separate ratifier for each
-core is useful hygiene, but the domain-bearing core is the primary replay boundary.
+fields as its prefix, and the full flat offer is always hash-committed for ratification. Signature-based
+ratifiers verify maker signatures over that commitment; managers, curves, and other on-chain ratifiers
+can attest policy without a maker signature. Changing either the chain or core therefore changes both
+the market ID and offer commitment. Operating a separate ratifier for each core is useful hygiene, but
+the domain-bearing core is the primary replay boundary.
 
 On the first touch of an uncreated market, the core checks `chainId`, `bivium`, and the maximum
 time-to-maturity (`10 * 365 days`) before token, gate, or hook probes. These checks are creation-only. If
