@@ -59,9 +59,11 @@ bind the market to one chain and one core deployment. Claims are fungible only *
 identity*, so concentrating activity on a standard set of maturities and strikes builds depth without
 making positions portable across chains or cores.
 
-An offer begins with the same eight fields, followed by its maker, side, price, limits, time window,
-consumption group, and ratifier. The complete flat offer is hashed and signed: changing any field,
-including the chain or core, changes its commitment.
+The complete flat `Offer` is `chainId`, `bivium`, `loanToken`, `collateralToken`, `maturity`, `strike`,
+`allowPartialRepay`, `gate`, `maker`, `buy`, `tick`, `maxUnits`, `maxAssets`, `start`, `expiry`, `group`,
+and `ratifier`, in that order. Its eight-field prefix is the market identity. `tick` encodes the price
+on the core's grid; there is no separate price field. The full offer is hashed and signed, so changing
+any field, including the chain or core, changes its commitment.
 
 Bivium markets focus on liquid, blue-chip collateral — **BTC and ETH** — because that collateral is deep
 and the risk is straightforward to price and hedge. The settlement window aligns to the standard
@@ -78,8 +80,9 @@ How a given market's rate is *justified* is pluggable, without changing the core
 
 - **Signed quotes (RFQ / order book).** A lender (or a market-maker quoting on their behalf) signs an
   offer at a chosen rate; a borrower fills it.
-- **An on-chain curve.** A pool quotes a rate as a function of its utilization, providing always-available
-  depth. The app's Borrow and Earn tabs use a curated curve pool by default.
+- **An optional on-chain curve.** When explicitly configured and funded, a pool can quote a rate as a
+  function of utilization. The stable app configuration disables this lane and uses signed CLOB offers,
+  with RFQ/intents available when configured; a curve is not guaranteed liquidity.
 
 In every case the rate is one number — read as a tick, an APR, or an upfront premium — and the immutable
 core simply checks that a fill respects it. The core never sets prices and holds no special pricing power.
@@ -93,7 +96,9 @@ commitment; that only describes the old signature and is not evidence that the o
 the current core. A missing or wrong domain prevents new-core execution.
 
 Positions also do not migrate between cores. A legacy read-and-exit path must remain available until
-old positions settle; this documentation does not claim that such a UI or any new deployment is live.
+old positions settle; this documentation does not claim that such a UI is live. A legacy Sepolia
+deployment may exist, but the fresh domain-bound release described here has not been deployed or
+promoted to production.
 
 ## Trust model in one paragraph
 

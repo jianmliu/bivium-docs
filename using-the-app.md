@@ -1,121 +1,105 @@
 # Using Bivium — a walkthrough
 
 Bivium is **non-recourse, fixed-rate, no-liquidation** lending. You post BTC or ETH as collateral, draw
-USDC, and at maturity you either **repay** (and reclaim your collateral) or **walk away** (deliver the
-collateral at your chosen floor and keep the USDC). There is **no liquidation engine and no margin calls** —
-the contract only ever reads "did you repay, yes or no."
+USDC, and at maturity either **repay** and reclaim the collateral or **walk away** and deliver it. There
+is no liquidation engine or margin call.
 
-Economically a Bivium loan *is* a put option: the borrower is protected on the downside (long a put), and the
-lender earns a premium for standing behind it (short a put). You don't need to think in options to use the app
-— but it's why the rates and the "deliver at your floor" mechanic work the way they do.
+The app has two experiences over the same markets and orders:
 
-This guide covers the three tabs — **Borrow**, **Earn**, **Positions** — plus first-time setup. It's a usage
-guide; for how the protocol works, see the [protocol overview](protocol-overview.md).
+- **Basic** provides guided **Markets** and **Portfolio** screens.
+- **Pro** provides a single **Trade** workspace with the book, chart, order ticket, and a positions tape.
 
----
-
-## 0. First time — verify the release, then connect
-
-1. **Check the Header before approving or signing.** It shows the environment, chain, shortened Bivium
-   core address, and release digest. Confirm all four match the release you intended to use. A familiar
-   token pair or market name is not enough: every market and offer belongs to one exact chain and core.
-2. **Connect a wallet** (top-right) and confirm its network matches the Header.
-3. **If the selected development environment provides faucets,** use only its displayed links and mock
-   token controls. No public addresses or currently live environment are asserted by this guide.
-
-If you're on the wrong network, the faucet bar prompts you to switch.
-
-The release is intentionally incompatible with legacy offers: old signatures are not converted into
-new offers. Positions created on an older core remain on that core and need a legacy read-and-exit path
-until settlement. Do not assume a position has migrated merely because the current app shows the same
-assets and maturity.
+For how the protocol works, see the [protocol overview](protocol-overview.md).
 
 ---
 
-## 1. Borrow — get USDC against your BTC/ETH, with no liquidation
+## 0. Verify the release, then connect
 
-The **Borrow** tab lends you USDC against collateral at a **fixed rate**, originated in a single transaction
-(you fill the pool's standing bid — there is no router, no gateway, and no capability grant).
+1. **Check the Header before approving or signing.** Its deployment identity shows the environment,
+   chain, shortened Bivium core address, and the first 12 characters of the release digest. Confirm all
+   four match the release you intended to use. A familiar token pair or market name is not enough:
+   every market and offer belongs to one exact chain and core.
+2. **Choose Basic or Pro** in the Header, then connect your wallet and confirm its network matches the
+   displayed chain.
+3. **Use faucets only when the selected development environment provides them.** Follow the links and
+   mock-token controls shown by that environment.
 
-1. **Enter how much collateral to lock** (e.g. `1.00` BTC). The big number up top is the current **fixed
-   borrow rate**.
-2. **Read the QUOTE box:**
-   - **You receive (≈)** — the USDC principal paid to you now.
-   - **Repay by maturity** — the fixed amount of USDC owed at maturity (the "face").
-   - **Pool liquidity** — how much the pool can currently lend (your draw can't exceed it).
-3. **Approve** the collateral token to the core (one-time per allowance), then click **Get … now →**.
-4. You now hold the USDC. The collateral is escrowed at your **floor** (strike).
-
-**At maturity you choose:**
-- **Repay** the face in USDC → reclaim 100% of your collateral; or
-- **Walk away** — do nothing, and the collateral is delivered at your floor. You keep the USDC.
-
-No price feed, no liquidation, no margin call can touch the position before maturity. The most you ever owe is
-the fixed face; the worst case is that you part with collateral you'd already decided you were willing to sell
-at the floor.
+The domain-bound release described here is pre-release; this guide publishes no fresh-release
+addresses and does not claim it has been promoted to production. A legacy Sepolia deployment may
+still exist, but its offers, signatures, and positions are not part of the new core.
 
 ---
 
-## 2. Earn — lend USDC and collect the premium
+## 1. Basic — Markets
 
-The **Earn** tab is the lender side: deposit USDC into the **curated vault** (a standard ERC-4626 pool) and
-earn the curve spread — the **volatility-risk premium** a borrower pays for no-liquidation financing.
+Open **Markets** to compare available loan-token/collateral series by strike and maturity. Select a
+market to open its action dock:
 
-1. **Enter an amount** of USDC. The big number is the current **lend rate** (the same curve the Borrow tab
-   pays).
-2. **Approve** USDC to the vault, then **Deposit** → you receive vault shares.
-3. **How your yield accrues:** interest streams into the vault's NAV as locked-profit; if a borrower defaults,
-   the position settles **repay-or-deliver** — you receive the collateral (not a fire-sale), and NAV re-marks
-   at maturity.
-4. **Withdraw** anytime there is idle or repaid liquidity (standard ERC-4626 `redeem`) — the **Withdraw** button
-   shows your current redeemable value.
+- **Borrow** fills the best executable signed maker bids for that exact market. Review the fixed APR,
+  proceeds, face owed, collateral, maturity, and strike before approving collateral and filling.
+- **Lend now** buys resting DCN credit from signed asks. The APR locks when the fill lands; you may sell
+  the DCN in Pro before maturity or hold it for repay-or-deliver settlement.
+- **Rate order** appears only when the RFQ/intent lane is configured. It lets a borrower name acceptable
+  terms for solvers to fill; signing an intent is not itself an executed loan.
 
-The key idea: you are **short a put**. A high rate means a higher chance you end up holding the collateral — so
-only lend against assets (BTC/ETH) you'd be content to own at the floor. (See `SECURITY.md` → adverse selection.)
+The stable default is the signed CLOB, with RFQ/intents available only when configured. The guarded
+curve/pool-manager lane is disabled by default. **Deposit** and LP subscription appear only in an
+explicitly configured Development or experimental build; do not assume a pool bid, pool liquidity, or
+LP deposit is available.
 
-Below the deposit panel, the **dual-currency / secondary** panels show the same unified order book, where
-sophisticated lenders can rest or take individual offers directly.
+Before submitting any action, re-check that the Header domain is the intended one. At maturity a
+borrower either repays the fixed face and reclaims collateral, or leaves the collateral for delivery.
+
+---
+
+## 2. Basic — Portfolio
+
+**Portfolio** is one unified tape of the connected account's commitments and activity:
+
+- **Loan** rows show debt, locked or reclaimable collateral, lifecycle state, and the available Repay
+  or Reclaim action.
+- **DCN** rows show directly held credit and expose Claim after maturity.
+- **Order** rows show remaining signed bids or asks after on-chain consumption and allow cancellation.
+- **LP** rows and their withdraw/request/redeem actions appear only when the optional pool surface is
+  configured and the account actually holds pool shares.
+
+The summary reports LP deposited, debt/delivered face, collateral locked, and resting orders. If the
+relayer or market-domain validation is unavailable, treat missing order or position data as unknown,
+not as evidence that a commitment disappeared.
 
 ---
 
-## 3. Positions — manage loans and deposits
+## 3. Pro — Trade
 
-The **Positions** tab has two sub-tabs.
+Switch to **Pro** for the exchange workspace. Choose the exact market, then use the unified signed book
+to take liquidity or rest a limit order. Bids and asks use one tick grid: `tick` encodes the price; APR
+is a display derived from it. Pro also includes the same position tape used by Portfolio.
 
-**Loans** (you borrowed):
-- Each card shows **days to maturity**, the **repay-by** amount, and your locked collateral.
-- **Repay** — pay the face in USDC to clear the debt (do this before maturity to reclaim collateral).
-- **Withdraw collateral** — once repaid (or the position is otherwise free), pull your BTC/ETH back.
-
-**Deposits** (you lent):
-- Each card shows **days to maturity** and your redeemable position.
-- **Claim … basket** — at maturity, claim your share of the settlement basket (USDC from repayers +
-  collateral from any defaulters, `min(face, collateral)` in kind).
-- **Withdraw** — pull idle/repaid liquidity that hasn't been claimed into a position.
+The pool's guarded bid is included only in a build that explicitly enables the pool lane and only when
+it is funded and operational. Otherwise the executable book is signed CLOB/RFQ liquidity. A relayer can
+hide or delay discovery, but the current core still checks the offer and market before execution.
 
 ---
+
+## Migration and legacy positions
+
+Legacy signatures are not converted into new offers. Positions created on an older core remain on that
+core and need a legacy read-and-exit path until settlement; this guide does not claim that path is
+already deployed. Do not assume a position migrated because another app release shows the same assets,
+strike, and maturity.
 
 ## Key terms
 
-- **Floor / strike** — the price at which you (borrower) would deliver the collateral, or (lender) would be
-  assigned it. Lower floor = safer for the lender, cheaper protection for the borrower.
-- **Maturity** — the fixed end date. `repay` and new borrows are only valid *before* it; `claim` only *after*.
-- **Rate / APR / tick** — one number, shown as an APR. It's the fixed cost of the loan and the fixed yield to
-  the lender; under the hood it's a price on a logistic tick grid with uniform log-odds steps, tuned for
-  fine discount/rate resolution near par.
-- **Repay-or-deliver** — the only settlement rule: a credit holder receives `min(face, collateral)` in kind. No
-  oracle decides this; the borrower's repay/no-repay choice does.
-- **No liquidation** — there is no maintenance margin and no liquidator. Nothing happens mid-term regardless of
-  price; everything settles once, at maturity.
-- **Curated vault** — the passive lender pool (ERC-4626). A curator allocates deposits into vetted markets at
-  the curve rate, so depositors don't pick individual markets.
-
----
+- **Floor / strike** — the price at which collateral is delivered or assigned.
+- **Maturity** — the fixed end date. Repayment and new borrowing occur before it; claims occur after it.
+- **Rate / APR / tick** — the fixed borrowing cost or lending yield. The offer carries a `tick`, not a
+  free-form price field.
+- **DCN** — the direct credit claim that settles to the market's repay-or-deliver basket.
+- **No liquidation** — there is no maintenance margin or liquidator; settlement occurs at maturity.
 
 ## Learn more
 
-- **[Protocol overview](protocol-overview.md)** — the offer model, repay-or-deliver settlement, why
-  there's no oracle and no liquidation, and how rates are set.
-- **[Security](security.md)** — trust model, the lender-side risk to understand, and token assumptions.
+- **[Protocol overview](protocol-overview.md)** — markets, offers, and repay-or-deliver settlement.
+- **[security guide](security.md)** — domain checks, trust model, lender risk, and token assumptions.
 
 > Pre-release and unaudited. Verify the Header; do not use with real funds.

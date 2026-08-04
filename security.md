@@ -4,24 +4,25 @@
 
 **Bivium is an unaudited proof of concept. Do not use it with real funds.**
 
-It has not been audited, formally verified, deployed, or run through a bug bounty. The test suite
-(unit + invariant) checks intended behaviour and core solvency properties, but that is **not** a
-security guarantee.
+It has not been audited, formally verified, or run through a bug bounty. A legacy Sepolia deployment
+may exist; the fresh domain-bound release described here has not been deployed or promoted to
+production. The test suite (unit + invariant) checks intended behaviour and core solvency properties,
+but that is **not** a security guarantee.
 
 ## Provenance
 
-- `src/Bivium.sol`, `src/interfaces/*`, `src/libraries/*` (`RateMath`), the pluggable `src/ratifiers/*`
-  (`EcrecoverRatifier`, `SetterRatifier`, `RateRatifier`, `MerkleRatifier`, `Eip1271Ratifier`),
-  `src/periphery/*` (`BorrowRouter`, `CreditFeeRouter`, `CreditERC20`), and `src/gates/*` (`AllowlistGate`)
+- `src/Bivium.sol`, `src/interfaces/*`, `src/libraries/*`, the pluggable `src/ratifiers/*`
+  (`AuctionRatifier`, `CurveRatifier`, `GuardedCurveRatifier`, `MerkleSignatureRatifier`,
+  `SetterRatifier`, `SignatureRatifier`), `src/periphery/*` (`CreditFeeRouter`,
+  `IntentSettlementRouter`, `WethGateway`), and `src/gates/*` (`AllowlistGate`)
   are original, clean-room code written from a written spec. They do not derive from any third-party (BUSL/GPL)
   source.
-- The only production dependency is **OpenZeppelin Contracts** (MIT): `SafeERC20`, `IERC20`, `ERC20`,
-  `IERC20Metadata`, `ReentrancyGuardTransient`, `ECDSA`, `Math`, `MerkleProof`, and `SignatureChecker`. Token
-  transfers and
-  signature verification (the latter only in the `*Ratifier`/`*Router` peripherals; the core runs no
-  signature scheme) use these audited building blocks rather than bespoke code. The borrow-side `BorrowRouter` holds no funds
-  across calls: it custodies collateral only within a single `fill` (CEI + `nonReentrant`), has no admin,
-  and can act for a borrower solely under that borrower's own signed terms.
+- `DualCurrencyPoolManager` and the vault contracts are optional pool/vault surfaces. They are not the
+  stable default execution path and should not be inferred to be enabled from their presence in the source.
+- The only production dependency is **OpenZeppelin Contracts** (MIT), including its ERC-20 and ERC-3156
+  interfaces, `SafeERC20`, `ERC20`, `ReentrancyGuard`, `ReentrancyGuardTransient`, `ECDSA`, `Math`,
+  `Ownable`, and `IERC165`. Token transfers and signature verification (only in ratifier and router
+  peripherals; the core runs no signature scheme) use these building blocks rather than bespoke code.
 
 ## Trust model
 
@@ -45,7 +46,8 @@ keep everything else *off* that path:
 
 - **Capability-scoped operators.** `grantAuthorization(operator, capabilities, expiry)` hands an
   operator only specific `CAP_*` bits (one per fund-moving function) and an optional expiry, instead of
-  full custody. A credit wrapper gets `CAP_TRANSFER_CREDIT` only; a borrow router gets `CAP_FILL` only;
+  full custody. The intent router receives `CAP_FILL` only; the WETH gateway receives only the fill and
+  collateral-withdrawal capabilities it needs.
   each operator's blast radius is one function, not the user's whole balance. `setAuthorization(x, true)`
   remains as the explicit full-custody grant (`ALL_CAPS`, no expiry) — use it only for fully trusted
   accounts.
@@ -54,7 +56,7 @@ keep everything else *off* that path:
   **never** move the maker's funds — even a malicious/compromised ratifier is bounded to "ratifies an
   offer within the maker's already-posted, `consumed`-capped budget," not theft. (A full operator is
   *not* automatically a ratifier, and vice-versa.)
-- **Quoting keys are off the path.** Rate/ECDSA ratifiers keep their *own* signer registries, so a hot
+- **Quoting keys are off the path.** Signature-based ratifiers keep their *own* signer registries, so a hot
   quoting key signs attestations only and holds no core authorization (the M-01-safe pattern).
 - **Order book / relayer / frontend are off the path.** Offer discovery and matching are entirely
   off-chain and custody-free; `fill` re-checks every economic invariant on-chain, so a
@@ -63,8 +65,8 @@ keep everything else *off* that path:
   and never authorized; a faulty gate can wrongly permit/deny credit or debt increases but cannot
   extract escrowed funds.
 
-`test/Authorization.t.sol` covers these directly: a registered ratifier cannot `withdrawLiquidity`; a
-full operator is rejected as a ratifier; a scoped grant honors only its capability and expires.
+Core and periphery authorization tests cover scoped grants, expiry, and the limited capabilities used
+by the intent router and WETH gateway.
 
 ### Chain and core domain boundary
 
@@ -93,9 +95,10 @@ records. Before acting, the manager validates the full market parameters. The ke
 until its release marker and manifest bind the expected core, manager, ratifier, and pools.
 
 A release manifest pins source, artifact, and client digests, but independent deployment verification
-is still required. Rollout proceeds in Development first, through a complete maturity cycle plus seven
-days, and only then reproduces the artifacts for Main. No addresses are published here and no such
-deployment is claimed to have occurred.
+is still required. Development must remain active for at least seven days **and** cover at least one
+complete market maturity cycle; these are independent gates and may overlap. Only after both pass are
+the artifacts reproduced for Main. No fresh-release addresses are published here, and that release is
+not claimed to have been deployed or promoted to production.
 
 This is an ABI-breaking transition: the fresh core, frontend, and keeper do not migrate or accept
 legacy offers as the new encoding. An old signature may still preflight as `RATIFIED` against its exact
@@ -185,7 +188,7 @@ and assert:
 - **Collateral backing** — delivered collateral still owed to holders is fully backed, and claims
   never exceed the delivered pool.
 
-Symbolic proofs (`test/Bivium.symbolic.t.sol`, via [Halmos](https://github.com/a16z/halmos)) verify —
+Symbolic proofs (`test/BiviumSymbolic.t.sol`, via [Halmos](https://github.com/a16z/halmos)) verify —
 for *all* inputs, not sampled — the repay-or-deliver state-machine guards: `fill` and `repay` always
 revert at/after maturity, and `claim` always reverts before it.
 
@@ -203,10 +206,10 @@ full-precision `Math.mulDiv` (512-bit intermediate), so the products do not over
 
 1. Independent security audit(s).
 2. Extended fuzzing / formal verification of the accounting invariants.
-3. Testnet deployment and a public bug bounty.
+3. Fresh-release Development deployment and a public bug bounty.
 4. Per-market review that the chosen tokens satisfy the assumptions above.
 
 ## Reporting a vulnerability
 
-This is a PoC with no production deployment. If you find an issue, please open a private report to
-the repository owner rather than a public issue.
+The fresh domain-bound release has no production deployment. If you find an issue, please open a
+private report to the repository owner rather than a public issue.

@@ -16,10 +16,11 @@ The same market has two sides:
 
 ## Where to start
 
-- **[Using the app](using-the-app.md)** — a step-by-step walkthrough of Borrow, Earn, and Positions.
+- **[Using the app](using-the-app.md)** — a walkthrough of Basic Markets and Portfolio, plus the Pro
+  Trade workspace.
 - **[Protocol overview](protocol-overview.md)** — how the core works: the offer model, repay-or-deliver
   settlement, why there's no oracle and no liquidation, and how rates are set.
 - **[Security](security.md)** — trust model, what to understand before lending, and token assumptions.
 
-> Bivium is an unaudited, pre-release proof of concept. No public deployment addresses are announced
-> here. Do not use it with real funds.
+> Bivium is an unaudited proof of concept. The fresh chain-and-core-bound release described here is
+> pre-release; no addresses for it are announced here. Do not use it with real funds.
