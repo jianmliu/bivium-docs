@@ -208,14 +208,14 @@ Some paths have separate unit tests (including secondary fills, the fill callbac
 transfer-accounting reverts), but this invariant suite does not establish their sequence-level safety;
 fund/repay callback combinations and broader flash behavior remain assurance gaps.
 
-No symbolic assurance is claimed yet for the new eight-field market boundary. In particular,
-`test/BiviumSymbolic.t.sol` does not establish the fill maturity boundary, and its repayment selector/harness
-still encodes the retired six-field market tuple. It must be repaired and rerun before any symbolic
-repayment or fill maturity claim is made.
+Symbolic assurance is limited for the new eight-field market boundary. Local verification migrated
+`test/BiviumSymbolic.t.sol` to the exact domain-bound repayment selector and Halmos proved that a positive
+repayment reaches the core's `MaturityPassed` rejection at or after maturity. The harness still does not
+establish the fill maturity boundary, so no symbolic fill-maturity claim is made.
 
-Static analysis ([Slither](https://github.com/crytic/slither), `slither . --fail-high`) reports zero
-findings (one "arbitrary from in transferFrom" is a triaged false positive: the `from` is gated by the
-contract's authorization check).
+Static analysis ([Slither](https://github.com/crytic/slither),
+`slither . --foundry-compile-all --fail-high`) completes without a high-severity failure. Lower-severity
+detector output remains review input rather than a claim of zero findings.
 
 The current tests also do not establish gas-griefing resistance, comprehensive cross-market behavior,
 or economic/MEV safety. The borrow-side arithmetic (strike collateralization and rate bounds) is covered
