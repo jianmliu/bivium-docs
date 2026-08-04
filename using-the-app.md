@@ -1,8 +1,9 @@
 # Using Bivium — a walkthrough
 
 Bivium is **non-recourse, fixed-rate, no-liquidation** lending. You post BTC or ETH as collateral, draw
-USDC, and at maturity either **repay** and reclaim the collateral or **walk away** and deliver it. There
-is no liquidation engine or margin call.
+USDC, and may repay strictly before maturity to reclaim the collateral. From maturity onward repayment
+is closed; unpaid debt contributes collateral to the market's pooled settlement basket. There is no
+liquidation engine or margin call.
 
 The app has two experiences over the same markets and orders:
 
@@ -47,8 +48,8 @@ curve/pool-manager lane is disabled by default. **Deposit** and LP subscription 
 explicitly configured Development or experimental build; do not assume a pool bid, pool liquidity, or
 LP deposit is available.
 
-Before submitting any action, re-check that the Header domain is the intended one. At maturity a
-borrower either repays the fixed face and reclaims collateral, or leaves the collateral for delivery.
+Before submitting any action, re-check that the Header domain is the intended one. Repay the fixed face
+while `block.timestamp < maturity` to free collateral. At and after maturity repayment is closed.
 
 ---
 
@@ -58,7 +59,8 @@ borrower either repays the fixed face and reclaims collateral, or leaves the col
 
 - **Loan** rows show debt, locked or reclaimable collateral, lifecycle state, and the available Repay
   or Reclaim action.
-- **DCN** rows show directly held credit and expose Claim after maturity.
+- **DCN** rows show fungible market credit and expose Claim from maturity onward for a pro-rata share of
+  loan tokens from repaid debt and collateral from unpaid debt.
 - **Order** rows show remaining signed bids or asks after on-chain consumption and allow cancellation.
 - **LP** rows and their withdraw/request/redeem actions appear only when the optional pool surface is
   configured and the account actually holds pool shares.
@@ -91,10 +93,11 @@ strike, and maturity.
 ## Key terms
 
 - **Floor / strike** — the price at which collateral is delivered or assigned.
-- **Maturity** — the fixed end date. Repayment and new borrowing occur before it; claims occur after it.
+- **Maturity** — the fixed cutoff. Repayment and new borrowing require `block.timestamp < maturity`;
+  claims apply from `block.timestamp >= maturity`.
 - **Rate / APR / tick** — the fixed borrowing cost or lending yield. The offer carries a `tick`, not a
   free-form price field.
-- **DCN** — the direct credit claim that settles to the market's repay-or-deliver basket.
+- **DCN** — fungible market credit that claims a pro-rata share of the pooled two-token settlement basket.
 - **No liquidation** — there is no maintenance margin or liquidator; settlement occurs at maturity.
 
 ## Learn more

@@ -24,32 +24,31 @@ position crosses below zero into debt — which is the single point where collat
 
 ## Repay-or-deliver settlement (no oracle, no liquidation)
 
-A credit claim is **not** a plain fixed payout. At maturity the borrower chooses:
-
-- **Repay** the loan token → reclaim the collateral; the lender is paid in the loan token, or
-- **Deliver** → the collateral is handed to the credit holder instead.
-
-A rational borrower repays only when the collateral is worth more than the amount owed, so the lender
-receives `min(face, collateral)` — **physically settled, in kind, with no price feed.**
+A credit claim is **not** a claim paired to one borrower. Credit is fungible within an exact market and
+represents a pooled settlement claim. A borrower may repay only while `block.timestamp < maturity`,
+contributing loan tokens and freeing their collateral. From `block.timestamp >= maturity`, repayment is
+closed and claims are available: unpaid debt contributes its collateral, while debt repaid before the
+cutoff contributes loan tokens. Each credit holder receives a pro-rata share of that two-token basket.
 
 This is why Bivium needs **no oracle and no liquidation**. The collateral is not a margin buffer to be
 sold against a price feed on the way down; it is simply the *second settlement currency*, delivered as-is
 if the borrower walks away. "No liquidation" and "dual-currency settlement" are the same design fact.
-Nothing happens mid-term regardless of price — every position settles exactly once, at maturity.
+Nothing revalues or liquidates a position mid-term. The maturity cutoff fixes which assets contribute
+to the pooled claim without consulting a price.
 
-## The economics: a loan is an option
+## The economics: option-like exposure
 
-The payoff above is exactly a **physically-settled put option** on the collateral:
+The payoff has **physically-settled put-like** economics:
 
-- The **borrower is long a put** — they have the right to "sell" their collateral to the lender at the
-  agreed strike (by walking away) if it falls below that level. That is their downside protection, and
-  why they can never be liquidated.
-- The **lender is short that put** — they earn a premium (the loan's yield) for standing behind it, and
-  may end up owning the collateral at the strike.
+- The **borrower has long-put-like protection** — they can repay before the cutoff to recover collateral
+  or remain unpaid and contribute that collateral to settlement. That is why they cannot be liquidated.
+- **Credit holders have short-put-like exposure** — their fungible claims may settle partly in loan
+  tokens and partly in a pro-rata share of collateral from all unpaid debt in the market.
 
-You don't have to think in options to use Bivium, but it explains the mechanics: the **rate** a borrower
-pays is the option premium, and a higher rate means a higher chance the lender ends up holding the
-collateral.
+You don't have to think in options to use Bivium, but it helps explain the assignment exposure. The
+quoted rate is not pure option premium: it can include time value, compensation for assignment/default
+risk, liquidity conditions, and maker spread. A higher displayed rate alone does not establish a
+monotonic probability of collateral delivery.
 
 ## Markets
 
@@ -104,8 +103,9 @@ promoted to production.
 
 ## Trust model in one paragraph
 
-The core is **immutable** (no owner, no admin, no pause, no upgrade), has **no oracle** (settlement reads
+The core is **immutable** (no protocol administrator, pause, or upgrade), has **no oracle** (settlement reads
 only repaid-or-not), and has **no liquidation engine**. Pricing is delegated to pluggable attestors that
-can validate an offer but can never move a user's funds. A borrower posts collateral once, at a fixed
+can authorize economically consequential fills within their configured scope; user-authorized operators
+also retain their granted capabilities. A borrower posts collateral once, at a fixed
 strike; nothing revalues or liquidates it mid-term. See **[Security](security.md)** for the full trust
 model, the lender-side risk you must understand, and the per-market token assumptions.
