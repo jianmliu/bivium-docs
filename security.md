@@ -58,11 +58,13 @@ user. The authorization model limits those paths:
   accounts.
 - **Quote authority differs from direct custody authority.** A registered ratifier or signer has no
   direct operator or withdrawal capability merely by being a quote authority. It can nevertheless
-  approve hostile-price bids or asks that fills execute, consuming maker liquidity or selling maker
-  credit up to the offer caps and consumption-group budget. A compromised quote authority can therefore
-  cause economic loss even though it cannot call withdrawals directly. Revoke the signer/ratifier and
-  stop publication promptly on suspected compromise. (A full operator is not automatically a ratifier,
-  and vice versa.)
+  approve hostile-price bids or asks that fills execute. Under signer compromise, the signer can create
+  new offers with hostile caps and fresh consumption groups, so those signer-chosen values are not a
+  trustworthy loss bound. The on-chain ceiling is the maker liquidity available to bids or maker credit
+  available to asks, together with the core-recorded consumption and caps of offers that actually execute.
+  A compromised quote authority can therefore cause economic loss even though it cannot call withdrawals
+  directly. Revoke the signer/ratifier and stop publication promptly on suspected compromise. (A full
+  operator is not automatically a ratifier, and vice versa.)
 - **Order book / relayer / frontend are off the path.** Offer discovery and matching are entirely
   off-chain and custody-free; `fill` re-checks every economic invariant on-chain, so a
   compromised relayer can censor or mis-rank (a liveness issue) but cannot move funds.
