@@ -21,4 +21,5 @@ The same market has two sides:
   settlement, why there's no oracle and no liquidation, and how rates are set.
 - **[Security](security.md)** — trust model, what to understand before lending, and token assumptions.
 
-> Bivium is currently a testnet preview and is unaudited. Do not use it with real funds.
+> Bivium is an unaudited, pre-release proof of concept. No public deployment addresses are announced
+> here. Do not use it with real funds.

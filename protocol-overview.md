@@ -53,9 +53,15 @@ collateral.
 
 ## Markets
 
-A market is identified by its terms: the loan token, the collateral token, the maturity, and the
-**strike** (the price at which collateral is delivered/assigned). Claims are fungible *within* a market,
-so concentrating activity on a standard set of maturities and strikes builds depth.
+A market's identity is exactly eight fields: `chainId`, `bivium` (the core contract address),
+`loanToken`, `collateralToken`, `maturity`, `strike`, `allowPartialRepay`, and `gate`. The first two
+bind the market to one chain and one core deployment. Claims are fungible only *within that exact
+identity*, so concentrating activity on a standard set of maturities and strikes builds depth without
+making positions portable across chains or cores.
+
+An offer begins with the same eight fields, followed by its maker, side, price, limits, time window,
+consumption group, and ratifier. The complete flat offer is hashed and signed: changing any field,
+including the chain or core, changes its commitment.
 
 Bivium markets focus on liquid, blue-chip collateral — **BTC and ETH** — because that collateral is deep
 and the risk is straightforward to price and hedge. The settlement window aligns to the standard
@@ -77,6 +83,17 @@ How a given market's rate is *justified* is pluggable, without changing the core
 
 In every case the rate is one number — read as a tick, an APR, or an upfront premium — and the immutable
 core simply checks that a fill respects it. The core never sets prices and holds no special pricing power.
+
+## Releases and compatibility
+
+The chain-and-core-bound format is an ABI-breaking release: it requires a fresh core, frontend, and
+keeper deployment. Legacy offers and signatures are not migrated and are not accepted as the new
+`Offer` encoding. A public check against an old ratifier can still return `RATIFIED` for the exact old
+commitment; that only describes the old signature and is not evidence that the offer can execute on
+the current core. A missing or wrong domain prevents new-core execution.
+
+Positions also do not migrate between cores. A legacy read-and-exit path must remain available until
+old positions settle; this documentation does not claim that such a UI or any new deployment is live.
 
 ## Trust model in one paragraph
 

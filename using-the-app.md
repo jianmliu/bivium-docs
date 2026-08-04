@@ -14,14 +14,21 @@ guide; for how the protocol works, see the [protocol overview](protocol-overview
 
 ---
 
-## 0. First time — connect and get test tokens
+## 0. First time — verify the release, then connect
 
-1. **Connect a wallet** (top-right). The app runs on a testnet (Sepolia) — no real funds.
-2. **Get gas:** use the external **Sepolia ETH faucet** linked in the faucet bar to fund gas.
-3. **Mint demo tokens:** in the **Sepolia faucet** bar, click **Mint USDC** (to lend/repay) and **wrap ETH**
-   (to use as collateral). These are mock tokens for the demo only.
+1. **Check the Header before approving or signing.** It shows the environment, chain, shortened Bivium
+   core address, and release digest. Confirm all four match the release you intended to use. A familiar
+   token pair or market name is not enough: every market and offer belongs to one exact chain and core.
+2. **Connect a wallet** (top-right) and confirm its network matches the Header.
+3. **If the selected development environment provides faucets,** use only its displayed links and mock
+   token controls. No public addresses or currently live environment are asserted by this guide.
 
 If you're on the wrong network, the faucet bar prompts you to switch.
+
+The release is intentionally incompatible with legacy offers: old signatures are not converted into
+new offers. Positions created on an older core remain on that core and need a legacy read-and-exit path
+until settlement. Do not assume a position has migrated merely because the current app shows the same
+assets and maturity.
 
 ---
 
@@ -111,4 +118,4 @@ The **Positions** tab has two sub-tabs.
   there's no oracle and no liquidation, and how rates are set.
 - **[Security](security.md)** — trust model, the lender-side risk to understand, and token assumptions.
 
-> Testnet, unaudited, demo tokens only. Do not use with real funds.
+> Pre-release and unaudited. Verify the Header; do not use with real funds.

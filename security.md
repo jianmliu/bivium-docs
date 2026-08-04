@@ -45,7 +45,7 @@ keep everything else *off* that path:
 
 - **Capability-scoped operators.** `grantAuthorization(operator, capabilities, expiry)` hands an
   operator only specific `CAP_*` bits (one per fund-moving function) and an optional expiry, instead of
-  full custody. A credit wrapper gets `CAP_TRANSFER_CREDIT` only; a borrow router gets `CAP_TAKE` only;
+  full custody. A credit wrapper gets `CAP_TRANSFER_CREDIT` only; a borrow router gets `CAP_FILL` only;
   each operator's blast radius is one function, not the user's whole balance. `setAuthorization(x, true)`
   remains as the explicit full-custody grant (`ALL_CAPS`, no expiry) — use it only for fully trusted
   accounts.
@@ -57,7 +57,7 @@ keep everything else *off* that path:
 - **Quoting keys are off the path.** Rate/ECDSA ratifiers keep their *own* signer registries, so a hot
   quoting key signs attestations only and holds no core authorization (the M-01-safe pattern).
 - **Order book / relayer / frontend are off the path.** Offer discovery and matching are entirely
-  off-chain and custody-free; `take`/`takeCredit` re-check every economic invariant on-chain, so a
+  off-chain and custody-free; `fill` re-checks every economic invariant on-chain, so a
   compromised relayer can censor or mis-rank (a liveness issue) but cannot move funds.
 - **Gates are access-policy only.** A market `gate` is consulted via `view` (`canIncreaseCredit/Debt`)
   and never authorized; a faulty gate can wrongly permit/deny credit or debt increases but cannot
@@ -65,6 +65,42 @@ keep everything else *off* that path:
 
 `test/Authorization.t.sol` covers these directly: a registered ratifier cannot `withdrawLiquidity`; a
 full operator is rejected as a ratifier; a scoped grant honors only its capability and expires.
+
+### Chain and core domain boundary
+
+Every market is identified by exactly `(chainId, bivium, loanToken, collateralToken, maturity, strike,
+allowPartialRepay, gate)`, where `bivium` is the intended core address. An offer repeats those eight
+fields as its prefix, and the full flat offer is hashed for ratification. Changing either the chain or
+core therefore changes both the market ID and offer commitment. Operating a separate ratifier for each
+core is useful hygiene, but the domain-bearing core is the primary replay boundary.
+
+On the first touch of an uncreated market, the core checks `chainId`, `bivium`, and the maximum
+time-to-maturity (`10 * 365 days`) before token, gate, or hook probes. These checks are creation-only. If
+the runtime chain ID later changes, an untouched old-domain market cannot be created, while a market
+already touched remains live for its normal lifecycle: fills, repayment, claims, collateral and
+liquidity withdrawal, and credit transfers. A chain-ID change is not an automatic trading halt for
+existing markets.
+
+Ratification receives the economic taker represented by the action, which may differ from the account
+that submitted the transaction. A public `isRatified` call is only a preflight: the core remains the
+authority on the represented parties, offer commitment, remaining capacity, market state, and all
+other execution checks.
+
+### Release and operating controls
+
+The relayer separates offers physically by chain, core, and market, and ignores legacy or domainless
+records. Before acting, the manager validates the full market parameters. The keeper fails closed
+until its release marker and manifest bind the expected core, manager, ratifier, and pools.
+
+A release manifest pins source, artifact, and client digests, but independent deployment verification
+is still required. Rollout proceeds in Development first, through a complete maturity cycle plus seven
+days, and only then reproduces the artifacts for Main. No addresses are published here and no such
+deployment is claimed to have occurred.
+
+This is an ABI-breaking transition: the fresh core, frontend, and keeper do not migrate or accept
+legacy offers as the new encoding. An old signature may still preflight as `RATIFIED` against its exact
+old commitment, but that does not make it executable on the current core. Old positions stay on their
+legacy core, so users need a legacy read-and-exit path until settlement.
 
 ### Lender-side risk: adverse selection in physical-delivery yield
 
@@ -150,7 +186,7 @@ and assert:
   never exceed the delivered pool.
 
 Symbolic proofs (`test/Bivium.symbolic.t.sol`, via [Halmos](https://github.com/a16z/halmos)) verify —
-for *all* inputs, not sampled — the repay-or-deliver state-machine guards: `take` and `repay` always
+for *all* inputs, not sampled — the repay-or-deliver state-machine guards: `fill` and `repay` always
 revert at/after maturity, and `claim` always reverts before it.
 
 Static analysis ([Slither](https://github.com/crytic/slither), `slither . --fail-high`) reports zero
