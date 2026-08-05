@@ -19,6 +19,8 @@ The same market has two sides:
 
 - **[Using the app](using-the-app.md)** — a walkthrough of Basic Markets and Portfolio, plus the Pro
   Trade workspace.
+- **[Bitcoin credit markets](bitcoin-credit-markets.md)** — design rationale for explicit, fixed terms,
+  standardized DCN, market pricing, and repay-or-deliver settlement.
 - **[Protocol overview](protocol-overview.md)** — how the core works: the offer model, repay-or-deliver
   settlement, why there's no oracle and no liquidation, and how rates are set.
 - **[Security](security.md)** — trust model, what to understand before lending, and token assumptions.
