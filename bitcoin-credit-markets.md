@@ -1,0 +1,141 @@
+# Bitcoin Collateral Needs Credit Markets
+
+Bitcoin can be excellent collateral without automatically producing a credit market. A
+bilateral loan can originate capital, but it does not by itself create a claim that other
+participants can price, transfer, or compare with a claim of the same term. Collateral
+quality matters, yet it does not create term liquidity on its own.
+
+Bivium approaches BTC- and ETH-backed credit as fixed-rate, fixed-term, non-recourse
+market activity. The important question is not only whether a borrower can obtain loan
+tokens against collateral. It is whether the resulting credit has a clear term, a shared
+identity, a quoted price, and a defined settlement outcome. For the mechanics behind
+that model, see the [protocol overview](protocol-overview.md).
+
+## A term is part of the instrument
+
+Maturity turns an open-ended balance into a comparable credit instrument. It gives each
+market a fixed horizon and establishes a single repayment cutoff: a borrower may repay
+only while the current time is strictly before maturity. At and after maturity,
+repayment closes.
+
+That cutoff does more than set a date on a loan. It lets participants compare claims
+with the same remaining term and know when their settlement exposure changes. Different
+maturities are different instruments, even when they use the same loan token and the
+same represented BTC collateral. A market may develop useful depth at a given term, but
+neither the term nor the collateral guarantees that outcome.
+
+## Standardized credit has a narrow domain
+
+In Bivium, DCN is fungible credit only within one exact market identity. That domain is:
+`chainId`, Bivium core address, `loanToken`, `collateralToken`, `maturity`, `strike`,
+`allowPartialRepay`, and `gate`.
+
+Every field matters. A change to the chain or core deployment changes the domain; so
+does a change to either token, maturity, strike, repayment policy, or access rule. DCN
+is therefore not a general claim on a borrower and is never portable across those
+domains. Within one exact domain it represents the same market-level settlement claim,
+which is what makes transfer and comparison possible without pretending that unlike
+credit is interchangeable.
+
+## One claim, one Offer model
+
+Borrow, Lend, Buy, and Sell are different ways to move the same market claim. They use
+the same signed Offer and fill model:
+
+- Lend acquires credit.
+- Borrow creates debt and posts the required collateral as the position moves below
+  zero.
+- Buy and Sell transfer existing credit between participants.
+
+The offer carries a `tick`, which encodes price on the core's grid. The interface can
+derive an APR from that price for display, but APR is not an independent on-chain term.
+The immutable core enforces the signed offer and its execution conditions; it does not
+set a rate. A displayed APR does not establish fair value, available liquidity, or a
+likely settlement result. Those depend on actual quotes, counterparties, market terms,
+and conditions at execution.
+
+This separation is deliberate. Market participants or configured quote authorities make
+economically consequential pricing choices, while the core checks whether a submitted
+fill conforms to the applicable signed terms. A relayer can help participants discover
+offers, but discovery is not execution: the core rechecks the offer, its domain, and
+other execution conditions on-chain.
+
+## Repay or deliver
+
+Before maturity, a borrower can repay the fixed debt and recover collateral. That right
+ends strictly at maturity. Debt repaid before the cutoff contributes loan tokens to the
+market-level settlement basket. Debt left unpaid contributes its collateral as-is.
+From maturity onward, DCN holders can claim their pro-rata share of the resulting loan
+token and collateral token amounts.
+
+This is physical delivery, not a mid-term collateral sale. A DCN holder consequently
+has short-put-like exposure: repayment can produce loan-token proceeds, while unpaid
+debt can produce collateral-token delivery at the market's terms. It is not a promise
+that a quoted yield compensates for that exposure.
+
+The settlement rule also explains Bivium's core properties. The core does not need an
+oracle to decide what collateral is worth, because it does not reprice collateral on the
+way to maturity. It has no forced liquidation engine and no margin call: there is no
+mid-term price threshold that compels a borrower to close. The choice is bounded by the
+term—repay before the cutoff and recover collateral, or let the collateral enter
+settlement after it.
+
+## Risk changes form
+
+Removing forced liquidation does not remove risk. It changes the risk the credit holder
+accepts. A holder must be prepared for assignment through physical delivery and for a
+two-token settlement result rather than only loan-token repayment. The economic quality
+of the collateral matters, as does the quality of any BTC representation or wrapper:
+an EVM market settles in its configured token, not necessarily in native BTC.
+
+Other material risks include:
+
+- whether there is enough executable liquidity at an acceptable quote;
+- the authority and scope of any signer or other quote authority;
+- relayer liveness, censorship, delay, or ranking of discovered offers;
+- correct validation of the exact market domain before acting;
+- token behavior and the assumptions required of each configured token; and
+- smart-contract, integration, authorization, and interface risk.
+
+The [Security guide](security.md) explains these boundaries in greater depth, including
+the distinction between a quote authority's economic influence and direct custody
+authority. No displayed rate removes the need to assess the collateral, domain, and
+counterparty terms.
+
+## Keep the trust boundaries visible
+
+Bivium's core is immutable and oracle-free: it records the fixed market terms and
+applies repay-or-deliver accounting rather than deciding market prices. That boundary
+does not make every surrounding component equally trustless. Quotes express the
+judgment of their makers or configured authorities. A relayer is a discovery and
+liveness component, not the source of execution truth. Client and core domain checks
+must prevent a familiar-looking asset pair from being treated as the intended market.
+And collateral representation carries its own custody, bridge, or wrapper assumptions.
+
+The practical discipline is to treat the exact domain and signed terms as part of the
+asset being acquired. A name such as “BTC credit” is not sufficient identification.
+Chain, core, tokens, term, strike, repayment policy, and gate all remain part of the
+claim.
+
+## Current availability
+
+The [Bivium Development Preview](https://dev.bivium.pages.dev) is the place to inspect
+the currently visible, enabled workflows. It is unaudited, non-production software for
+testing only. Do not use real funds.
+
+This article describes the market design; it does not repeat the interface steps. For
+the available screens and their operating cautions, read [Using Bivium](using-the-app.md).
+If a workflow is not visible and enabled in the Preview, this documentation does not
+present it as available.
+
+## Market structure is the point
+
+Bitcoin-backed credit becomes more legible when its term, claim identity, price, and
+settlement are explicit. That structure can make credit transferable and comparable;
+under suitable participation and quoting conditions, it may also support useful
+liquidity. It does not promise inexpensive borrowing, deep markets, or risk-free yield.
+
+Bivium's contribution is this market structure: fixed terms, standardized
+domain-bound DCN, signed pricing, and repay-or-deliver settlement. The result is a way
+to reason clearly about Bitcoin collateral and credit risk—not a guarantee that either
+will be cheap or safe.
