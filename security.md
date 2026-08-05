@@ -4,10 +4,10 @@
 
 **Bivium is an unaudited proof of concept. Do not use it with real funds.**
 
-It has not been audited, formally verified, or run through a bug bounty. A legacy Sepolia deployment
-may exist; the fresh domain-bound release described here has not been deployed or promoted to
-production. The test suite (unit + invariant) checks intended behaviour and core solvency properties,
-but that is **not** a security guarantee.
+It has not been audited, formally verified, or run through a bug bounty. The current Development
+Preview is available for testing, but the domain-bound release has not been promoted to production and
+no contract addresses are published here. The test suite (unit + invariant) checks intended behaviour
+and core solvency properties, but that is **not** a security guarantee.
 
 ## Provenance
 
@@ -17,8 +17,6 @@ but that is **not** a security guarantee.
   `IntentSettlementRouter`, `WethGateway`), and `src/gates/*` (`AllowlistGate`)
   are original, clean-room code written from a written spec. They do not derive from any third-party (BUSL/GPL)
   source.
-- `DualCurrencyPoolManager` and the vault contracts are optional pool/vault surfaces. They are not the
-  stable default execution path and should not be inferred to be enabled from their presence in the source.
 - The only production dependency is **OpenZeppelin Contracts** (MIT), including its ERC-20 and ERC-3156
   interfaces, `SafeERC20`, `ERC20`, `ReentrancyGuard`, `ReentrancyGuardTransient`, `ECDSA`, `Math`,
   `Ownable`, and `IERC165`. Token transfers and signature verification (only in ratifier and router
@@ -100,16 +98,16 @@ other execution checks.
 ### Required fresh-release promotion controls
 
 The relayer separates offers physically by chain, core, and market, and ignores legacy or domainless
-records. Before acting, the manager validates the full market parameters. The keeper's runtime release
+records. Before acting, the client validates the full market parameters. The keeper's runtime release
 marker is implemented and fails closed on a mismatch.
 
 The following are required promotion policy for the fresh release, not a claim that every control is
-already deployed or enforced: the release manifest must bind the correct core, manager, ratifier, and
-pools and pin source, artifact, and client digests; independent deployment verification is required;
+already deployed or enforced: the release manifest must bind the correct core and ratifier and pin
+source, artifact, and client digests; independent deployment verification is required;
 Development must remain active for at least seven days **and** cover at least one complete market
 maturity cycle; and artifacts must then be reproduced for Main. Manifest binding and address updates
-remain pending release work. No fresh-release addresses are published here, and that release is not
-claimed to have been deployed or promoted to production.
+remain pending release work. The Development Preview frontend is deployed for testing, but no
+fresh-release contract addresses are published here and the release is not promoted to production.
 
 This is an ABI-breaking transition: the fresh core, frontend, and keeper do not migrate or accept
 legacy offers as the new encoding. An old signature may still preflight as `RATIFIED` against its exact
@@ -141,7 +139,8 @@ would accept, and the asset is
 only offer blue-chip assets.
 
 **Where the defense lives.** The core is deliberately neutral — it does not (and will not) judge collateral
-quality, exactly as Uniswap will not stop you LP-ing a honeypot. The defense is at the **edges**: fund only
+quality, exactly as a neutral exchange will not stop you providing liquidity to a honeypot. The defense
+is at the **edges**: fund only
 vetted `(collateral, strike)` markets via a **curator vault** (ERC-4626) or a market list, and surface the
 components and uncertainty behind a displayed APR rather than presenting it as a default probability.
 See the lender-side risk discussion in the [protocol overview](protocol-overview.md).
@@ -154,8 +153,6 @@ ERC-20s:
 - **No fee-on-transfer / deflationary tokens** — the contract assumes the amount sent equals the
   amount received.
 - **No rebasing / balance-changing tokens** — balances must change only on explicit transfers.
-  (A non-rebasing yield-bearing wrapper such as an ERC-4626 share is fine and is the recommended way
-  to keep idle pool liquidity productive.)
 - **No transfer hooks (e.g. ERC-777)** — although CEI + `nonReentrant` defend against reentrancy,
   hook tokens are out of the supported set.
 
@@ -197,11 +194,11 @@ primary origination by filling a lender bid, partial repayment, collateral and l
 credit transfer and claim, maturity progression, and wrong-chain/wrong-core creation probes. It asserts:
 
 - **Loan solvency** — the contract's loan balance always exactly backs withdrawable lender liquidity
-  plus the unclaimed repaid-loan pool.
+  plus the unclaimed repaid-loan balance.
 - **Credit conservation** — the sum of holder credit equals originated face minus claimed face (no
   credit can be minted from nothing).
 - **Collateral backing** — pooled collateral still owed to holders is fully backed, and claims
-  never exceed the delivered pool.
+  never exceed the delivered collateral allocation.
 
 Secondary fills, callback-enabled variants, and ERC-3156 flash loans are outside that stateful handler.
 Some paths have separate unit tests (including secondary fills, the fill callback, and flash-loan
@@ -221,13 +218,14 @@ The current tests also do not establish gas-griefing resistance, comprehensive c
 or economic/MEV safety. The borrow-side arithmetic (strike collateralization and rate bounds) is covered
 by unit/fuzz tests, not a current symbolic proof. All `mulDiv` use OpenZeppelin's
 full-precision `Math.mulDiv` (512-bit intermediate), so the products do not overflow prematurely, and
-`claim` distributes pools via cumulative rounding, leaving no stranded dust once fully redeemed.
+`claim` distributes both settlement assets via cumulative rounding, leaving no stranded dust once all
+credit is claimed.
 
 ## Before any production use
 
 1. Independent security audit(s).
 2. Extended fuzzing / formal verification of the accounting invariants.
-3. Fresh-release Development deployment and a public bug bounty.
+3. A complete Development observation period and a public bug bounty.
 4. Per-market review that the chosen tokens satisfy the assumptions above.
 
 ## Reporting a vulnerability

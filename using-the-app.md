@@ -2,39 +2,41 @@
 
 Bivium is **non-recourse, fixed-rate, no-liquidation** lending. You post BTC or ETH as collateral, draw
 USDC, and may repay strictly before maturity to reclaim the collateral. From maturity onward repayment
-is closed; unpaid debt contributes collateral to the market's pooled settlement basket. There is no
-liquidation engine or margin call.
+is closed; unpaid debt contributes collateral to market settlement. There is no liquidation engine or
+margin call.
 
-The app has two experiences over the same markets and orders:
+The current **[Development Preview](https://dev.bivium.pages.dev)** has two experiences over the same
+configured markets and signed orders:
 
 - **Basic** provides guided **Markets** and **Portfolio** screens.
-- **Pro** provides a single **Trade** workspace with the book, chart, order ticket, and a positions tape.
+- **Pro** provides a single **Trade** workspace with the book, chart, order ticket, and positions tape.
 
-For how the protocol works, see the [protocol overview](protocol-overview.md).
+This guide documents only features enabled in the Development Preview. For the underlying mechanics,
+see the [protocol overview](protocol-overview.md).
 
 ---
 
-## 0. Verify the release, then connect
+## 0. Verify the Preview, then connect
 
-1. **Check the Header before approving or signing.** Its deployment identity shows the environment,
-   chain, shortened Bivium core address, and the first 12 characters of the release digest. Confirm all
-   four match the release you intended to use. A familiar token pair or market name is not enough:
-   every market and offer belongs to one exact chain and core.
-2. **Choose Basic or Pro** in the Header, then connect your wallet and confirm its network matches the
-   displayed chain.
-3. **Use faucets only when the selected development environment provides them.** Follow the links and
-   mock-token controls shown by that environment.
+1. Open the **[Bivium Development Preview](https://dev.bivium.pages.dev)**.
+2. **Check the Header before approving or signing.** Its deployment identity shows the environment,
+   chain, shortened Bivium core address, and release digest prefix. Confirm they match the environment
+   you intended to use. A familiar token pair or market name is not enough: every market and offer
+   belongs to one exact chain and core.
+3. **Choose Basic or Pro**, connect your wallet, and confirm that its network matches the displayed
+   chain.
+4. Use only test assets supplied for the selected Development environment.
 
-The domain-bound release described here is pre-release; this guide publishes no fresh-release
-addresses and does not claim it has been promoted to production. A legacy Sepolia deployment may
-still exist, but its offers, signatures, and positions are not part of the new core.
+The Preview is a test frontend for an unaudited release. It is not production, this guide publishes no
+contract addresses, and it must not be used with real funds.
 
 ---
 
 ## 1. Basic — Markets
 
-Open **Markets** to compare available loan-token/collateral series by strike and maturity. Select a
-market to open its action dock:
+Open **Markets** to compare the series listed by the current deployment configuration. Each series is
+identified by its loan token, collateral token, strike, and maturity. Select a market to open its action
+dock:
 
 - **Borrow** fills the best executable signed maker bids for that exact market. Review the fixed APR,
   proceeds, face owed, collateral, maturity, and strike before approving collateral and filling.
@@ -43,52 +45,64 @@ market to open its action dock:
 - **Rate order** appears only when the RFQ/intent lane is configured. It lets a borrower name acceptable
   terms for solvers to fill; signing an intent is not itself an executed loan.
 
-The stable default is the signed CLOB, with RFQ/intents available only when configured. The guarded
-curve/pool-manager lane is disabled by default. **Deposit** and LP subscription appear only in an
-explicitly configured Development or experimental build; do not assume a pool bid, pool liquidity, or
-LP deposit is available.
-
-Before submitting any action, re-check that the Header domain is the intended one. Repay the fixed face
-while `block.timestamp < maturity` to free collateral. At and after maturity repayment is closed.
+The signed order book is the default liquidity source, with RFQ/intents available only when configured.
+Before submitting an action, re-check the Header domain and full market terms. Repay the fixed face while
+`block.timestamp < maturity` to free collateral. At and after maturity, repayment is closed.
 
 ---
 
 ## 2. Basic — Portfolio
 
-**Portfolio** is one unified tape of the connected account's commitments and activity:
+**Portfolio** is a unified tape of the connected account's enabled commitments and activity:
 
-- **Loan** rows show debt, locked or reclaimable collateral, lifecycle state, and the available Repay
-  or Reclaim action.
+- **Loan** rows show debt, locked or reclaimable collateral, lifecycle state, and the available Repay or
+  Reclaim action.
 - **DCN** rows show fungible market credit and expose Claim from maturity onward for a pro-rata share of
   loan tokens from repaid debt and collateral from unpaid debt.
-- **Order** rows show remaining signed bids or asks after on-chain consumption and allow cancellation.
-- **LP** rows and their withdraw/request/redeem actions appear only when the optional pool surface is
-  configured and the account actually holds pool shares.
+- **Order** rows show the remaining size of signed bids or asks after on-chain consumption and allow
+  cancellation.
 
-The summary reports LP deposited, debt/delivered face, collateral locked, and resting orders. If the
-relayer or market-domain validation is unavailable, treat missing order or position data as unknown,
-not as evidence that a commitment disappeared.
+Portfolio reads the bounded list of markets configured for the Preview. This lets it inspect known
+markets even when automatic discovery is unavailable, while preventing data from an unvalidated market
+domain from being treated as safe.
+
+The summary reports debt or delivered face, collateral locked, and resting orders. If the relayer is
+unavailable, the order count may be shown as `unknown`. If required market configuration or domain
+validation fails, Portfolio shows an unavailable state and Retry action. An unavailable view is **not**
+an empty account: retry and independently verify on-chain state before concluding that a commitment is
+absent.
+
+### Claiming matured DCN
+
+When a DCN can be claimed, its action area shows **Estimated proceeds** before the Claim transaction:
+
+- the loan-token row estimates the holder's share contributed by debt repaid before maturity;
+- the collateral-token row estimates the holder's share contributed by debt left unpaid at maturity.
+
+The preview is read from current contract state and refreshes while the page is open. It is an estimate,
+not a guaranteed execution result; the transaction uses the state available when it executes. If the
+estimate cannot be loaded, do not infer that the claim is worth zero. Retry or verify the claim directly
+before submitting.
 
 ---
 
 ## 3. Pro — Trade
 
-Switch to **Pro** for the exchange workspace. Choose the exact market, then use the unified signed book
-to take liquidity or rest a limit order. Bids and asks use one tick grid: `tick` encodes the price; APR
-is a display derived from it. Pro also includes the same position tape used by Portfolio.
+Switch to **Pro** for the exchange workspace. Choose the exact configured market, then use the unified
+signed book to take liquidity or rest a limit order. Bids and asks use one tick grid: `tick` encodes the
+price and APR is derived for display. Pro also includes the enabled Loan, DCN, and Order position tape
+used by Portfolio.
 
-The pool's guarded bid is included only in a build that explicitly enables the pool lane and only when
-it is funded and operational. Otherwise the executable book is signed CLOB/RFQ liquidity. A relayer can
-hide or delay discovery, but the current core still checks the offer and market before execution.
+A relayer can hide, delay, or mis-rank discovery, but it does not hold user funds. The core re-checks
+the offer, market domain, capacity, and other execution conditions on-chain.
 
 ---
 
 ## Migration and legacy positions
 
 Legacy signatures are not converted into new offers. Positions created on an older core remain on that
-core and need a legacy read-and-exit path until settlement; this guide does not claim that path is
-already deployed. Do not assume a position migrated because another app release shows the same assets,
-strike, and maturity.
+core and require a compatible legacy interface until completion. Do not assume a position migrated
+because another app release shows the same assets, strike, and maturity.
 
 ## Key terms
 
@@ -97,12 +111,12 @@ strike, and maturity.
   claims apply from `block.timestamp >= maturity`.
 - **Rate / APR / tick** — the fixed borrowing cost or lending yield. The offer carries a `tick`, not a
   free-form price field.
-- **DCN** — fungible market credit that claims a pro-rata share of the pooled two-token settlement basket.
+- **DCN** — fungible market credit that claims a pro-rata share of the market's two-token settlement.
 - **No liquidation** — there is no maintenance margin or liquidator; settlement occurs at maturity.
 
 ## Learn more
 
 - **[Protocol overview](protocol-overview.md)** — markets, offers, and repay-or-deliver settlement.
-- **[security guide](security.md)** — domain checks, trust model, lender risk, and token assumptions.
+- **[Security guide](security.md)** — domain checks, trust model, lender risk, and token assumptions.
 
-> Pre-release and unaudited. Verify the Header; do not use with real funds.
+> Development Preview and unaudited software. Verify the Header and do not use real funds.
