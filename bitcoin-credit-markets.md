@@ -1,6 +1,6 @@
 # Bitcoin Collateral Needs Credit Markets
 
-Bitcoin can be excellent collateral without automatically producing a credit market. A
+Bitcoin can serve as high-quality collateral without automatically producing a credit market. A
 bilateral loan can originate capital, but it does not by itself create a claim that other
 participants can price, transfer, or compare with a claim of the same term. Collateral
 quality matters, yet it does not create term liquidity on its own.
@@ -13,10 +13,10 @@ that model, see the [protocol overview](protocol-overview.md).
 
 ## A term is part of the instrument
 
-Maturity turns an open-ended balance into a comparable credit instrument. It gives each
-market a fixed horizon and establishes a single repayment cutoff: a borrower may repay
-only while the current time is strictly before maturity. At and after maturity,
-repayment closes.
+Specifying a maturity gives the claim a fixed horizon and makes same-term claims
+comparable. It also establishes a single repayment cutoff: a borrower may repay only
+while the current time is strictly before maturity. At and after maturity, repayment
+closes.
 
 That cutoff does more than set a date on a loan. It lets participants compare claims
 with the same remaining term and know when their settlement exposure changes. Different
@@ -27,7 +27,8 @@ neither the term nor the collateral guarantees that outcome.
 ## Standardized credit has a narrow domain
 
 In Bivium, DCN is fungible credit only within one exact market identity. That domain is:
-`chainId`, Bivium core address, `loanToken`, `collateralToken`, `maturity`, `strike`,
+`chainId`, `bivium` (the core contract address), `loanToken`, `collateralToken`,
+`maturity`, `strike`,
 `allowPartialRepay`, and `gate`.
 
 Every field matters. A change to the chain or core deployment changes the domain; so
@@ -40,7 +41,7 @@ credit is interchangeable.
 ## One claim, one Offer model
 
 Borrow, Lend, Buy, and Sell are different ways to move the same market claim. They use
-the same signed Offer and fill model:
+the same Offer and fill model:
 
 - Lend acquires credit.
 - Borrow creates debt and posts the required collateral as the position moves below
@@ -49,16 +50,21 @@ the same signed Offer and fill model:
 
 The offer carries a `tick`, which encodes price on the core's grid. The interface can
 derive an APR from that price for display, but APR is not an independent on-chain term.
-The immutable core enforces the signed offer and its execution conditions; it does not
-set a rate. A displayed APR does not establish fair value, available liquidity, or a
-likely settlement result. Those depend on actual quotes, counterparties, market terms,
-and conditions at execution.
+The immutable core does not set a rate. It checks the submitted market domain,
+ratification result, capacity, maturity, and other execution conditions. A displayed
+APR does not establish fair value, available liquidity, or a likely settlement result.
+Those depend on actual quotes, counterparties, market terms, and conditions at
+execution.
 
-This separation is deliberate. Market participants or configured quote authorities make
-economically consequential pricing choices, while the core checks whether a submitted
-fill conforms to the applicable signed terms. A relayer can help participants discover
-offers, but discovery is not execution: the core rechecks the offer, its domain, and
-other execution conditions on-chain.
+This separation is deliberate. Configured ratifiers authorize offers. A
+signature-based ratifier verifies a maker signature over the offer commitment, while
+another configured on-chain ratifier can attest policy without a maker signature. In the
+current Development Preview, signed quotes can be used for offer discovery, but signing
+is not a universal property of an Offer or of ratification. Market participants or
+configured quote authorities make economically consequential pricing choices; the core
+runs no signature scheme. A relayer can help participants discover offers, but discovery
+is not execution: the core rechecks the submitted domain, ratification result, capacity,
+maturity, and other execution conditions on-chain.
 
 ## Repay or deliver
 
@@ -112,10 +118,12 @@ liveness component, not the source of execution truth. Client and core domain ch
 must prevent a familiar-looking asset pair from being treated as the intended market.
 And collateral representation carries its own custody, bridge, or wrapper assumptions.
 
-The practical discipline is to treat the exact domain and signed terms as part of the
-asset being acquired. A name such as “BTC credit” is not sufficient identification.
-Chain, core, tokens, term, strike, repayment policy, and gate all remain part of the
-claim.
+The practical discipline is to validate that the full eight-field domain is the market a
+user intends to use. A familiar name such as “BTC credit” is not sufficient
+identification. The core binds execution to the submitted domain, but it cannot infer
+whether that domain matches a user's intent. That domain is the identity of fungible
+DCN; the full Offer adds the transaction terms a participant accepts and is not part of
+the fungible claim identity.
 
 ## Current availability
 
@@ -136,6 +144,6 @@ under suitable participation and quoting conditions, it may also support useful
 liquidity. It does not promise inexpensive borrowing, deep markets, or risk-free yield.
 
 Bivium's contribution is this market structure: fixed terms, standardized
-domain-bound DCN, signed pricing, and repay-or-deliver settlement. The result is a way
+domain-bound DCN, ratified offer pricing, and repay-or-deliver settlement. The result is a way
 to reason clearly about Bitcoin collateral and credit risk—not a guarantee that either
 will be cheap or safe.
