@@ -138,11 +138,13 @@ would accept, and the asset is
 **real, liquid, and not mintable/riggable by the borrower** — which is why traditional dual-currency products
 only offer blue-chip assets.
 
-**Where the defense lives.** The core is deliberately neutral — it does not (and will not) judge collateral
-quality, exactly as a neutral exchange will not stop you providing liquidity to a honeypot. The defense
-is at the **edges**: fund only
-vetted `(collateral, strike)` markets via a **curator vault** (ERC-4626) or a market list, and surface the
-components and uncertainty behind a displayed APR rather than presenting it as a default probability.
+**Where responsibility lies.** The core is deliberately neutral — it does not (and will not) judge collateral
+quality, exactly as a neutral exchange will not stop you providing liquidity to a honeypot. Before
+participating, independently verify the exact collateral token and address, its wrapper/custody model,
+the strike, maturity, and the full market domain. The Development Preview's configured market list is a
+UI safety boundary only; it is not due diligence and does not guarantee a market's collateral or economic
+quality. Treat the components and uncertainty behind a displayed APR as information to assess, not as a
+default probability.
 See the lender-side risk discussion in the [protocol overview](protocol-overview.md).
 
 ## Token assumptions (MUST hold per market)
@@ -169,9 +171,10 @@ Beyond the ERC-20 conformance above, the **economic** quality of the collateral 
   the second blue-chip.
 - **Long-tail / niche collateral is deliberately not supported.** Supporting it safely requires exactly the machinery
   Bivium omits — a price-oracle suite, collateral-utility compartments, and token wrappers (the breadth design used by oracle-based, long-tail lenders). Bivium's scope is the opposite: **depth on one or two blue-chips, oracle-free.** A niche
-  asset can only ever be a bespoke/off-grid market at the curator's explicit risk.
-- **Wrapper choice matters.** Deribit/CME hedge in **native BTC**, but EVM collateral is necessarily a wrapped/vault
-  token. Prefer **trustless-vault native BTC/ETH** (a Babylon/BitVM-style self-custodial vault) over custodial WBTC/cbBTC:
+  asset can only ever be a bespoke/off-grid market at the participant's explicit risk.
+- **Wrapper choice matters.** Deribit/CME hedge in **native BTC**, but EVM collateral is necessarily an externally
+  issued wrapped/vault token. Prefer a **trust-minimized Bitcoin-vault wrapper** (for example, a Babylon/BitVM-style
+  self-custodial vault) over custodial WBTC/cbBTC:
   this swaps *custodian-credit* depeg for smaller *bridge/challenge-window* risk. The vault's peg-out delay does **not**
   affect Bivium's settlement (the core settles in the EVM token; the delay bites only at terminal redemption to L1) and
   is intermediated off-protocol by a **front-pay** liquidity service — but the residual native-vs-vault-token basis is a
@@ -182,7 +185,7 @@ Beyond the ERC-20 conformance above, the **economic** quality of the collateral 
   permissioned venue.
 
 Assets with no deep options market to hedge, or that the borrower can mint/rig, must stay bespoke/off-grid and are the
-curator's explicit risk.
+participant's explicit risk.
 
 ## Assurance scope at the pinned source revision
 
