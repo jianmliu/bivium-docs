@@ -19,8 +19,10 @@ and core solvency properties, but that is **not** a security guarantee.
   source.
 - The only production dependency is **OpenZeppelin Contracts** (MIT), including its ERC-20 and ERC-3156
   interfaces, `SafeERC20`, `ERC20`, `ReentrancyGuard`, `ReentrancyGuardTransient`, `ECDSA`, `Math`,
-  `Ownable`, and `IERC165`. Token transfers and signature verification (only in ratifier and router
-  peripherals; the core runs no signature scheme) use these building blocks rather than bespoke code.
+  `Ownable`, and `IERC165`. Token transfers and ECDSA recovery use these building blocks rather than
+  bespoke code. Signature-based ratifiers verify offer signatures, and the intent router verifies its
+  own signed intents. The core does not implement offer-signature verification, but it does verify the
+  EIP-712 signatures submitted to `grantAuthorizationBySig`.
 
 ## Trust model
 
@@ -54,6 +56,11 @@ user. The authorization model limits those paths:
   and the checks on those actions. `setAuthorization(x, true)`
   remains as the explicit full-custody grant (`ALL_CAPS`, no expiry) — use it only for fully trusted
   accounts.
+- **Signed grants are custody-sensitive authorization.** `grantAuthorizationBySig` lets any submitter
+  relay an EIP-712 grant signed by the authorizer. The core verifies the signature, nonce, deadline,
+  capabilities, and expiry, then writes the same scoped or full operator authority as a direct grant.
+  A signed grant can therefore create real fund-moving capability; review its operator, capability set,
+  expiry, verifying core, and chain as carefully as an on-chain authorization transaction.
 - **Quote authority differs from direct custody authority.** A registered ratifier or signer has no
   direct operator or withdrawal capability merely by being a quote authority. It can nevertheless
   approve hostile-price bids or asks that fills execute. Under signer compromise, the signer can create
@@ -66,9 +73,13 @@ user. The authorization model limits those paths:
 - **Order book / relayer / frontend are off the path.** Offer discovery and matching are entirely
   off-chain and custody-free; `fill` re-checks every economic invariant on-chain, so a
   compromised relayer can censor or mis-rank (a liveness issue) but cannot move funds.
-- **Gates are access-policy only.** A market `gate` is consulted via `view` (`canIncreaseCredit/Debt`)
-  and never authorized; a faulty gate can wrongly permit/deny credit or debt increases but cannot
-  extract escrowed funds.
+- **Gates combine access policy with optional lifecycle hooks.** The domain-bound `gate` address is
+  consulted via `view` (`canIncreaseCredit` and `canIncreaseDebt`). If that same address advertises
+  `IHooks` when the market is first touched, the core caches the result and invokes `beforeTake` and
+  `afterTake` around debt-originating fills and `beforeRepay` and `afterRepay` around repayments. Naming
+  a gate does not itself grant operator authority, but its hooks may revert or make external calls,
+  impairing origination or repayment liveness and adding integration risk. The core's reentrancy guard
+  and accounting checks constrain this surface but do not eliminate it.
 
 Core and periphery authorization tests cover scoped grants, expiry, and the limited capabilities used
 by the intent router and WETH gateway.
@@ -163,29 +174,24 @@ Creating a market with a non-conforming token is unsafe and is the deployer's re
 ### Collateral asset (per market)
 
 Beyond the ERC-20 conformance above, the **economic** quality of the collateral is what the lender's short-put rests on
-(see adverse selection, above). The intended universe:
+(see adverse selection, above). Participants must assess the configured token and any external risk-management
+arrangements independently:
 
-- **Primary: BTC, then ETH.** Deep, liquid, blue-chip, and — critically — **hedgeable on a continuous options market**
-  (Deribit for crypto; CME/IBIT increasingly in-band for BTC), so a solver can offset its assigned-put risk 1:1 and the
-  asset is not mintable/riggable by the borrower. These are the adverse-selection-*safe* collateral. BTC leads; ETH is
-  the second blue-chip.
-- **Long-tail / niche collateral is deliberately not supported.** Supporting it safely requires exactly the machinery
-  Bivium omits — a price-oracle suite, collateral-utility compartments, and token wrappers (the breadth design used by oracle-based, long-tail lenders). Bivium's scope is the opposite: **depth on one or two blue-chips, oracle-free.** A niche
-  asset can only ever be a bespoke/off-grid market at the participant's explicit risk.
-- **Wrapper choice matters.** Deribit/CME hedge in **native BTC**, but EVM collateral is necessarily an externally
-  issued wrapped/vault token. Prefer a **trust-minimized Bitcoin-vault wrapper** (for example, a Babylon/BitVM-style
-  self-custodial vault) over custodial WBTC/cbBTC:
-  this swaps *custodian-credit* depeg for smaller *bridge/challenge-window* risk. The vault's peg-out delay does **not**
-  affect Bivium's settlement (the core settles in the EVM token; the delay bites only at terminal redemption to L1) and
-  is intermediated off-protocol by a **front-pay** liquidity service — but the residual native-vs-vault-token basis is a
-  tail the Deribit hedge cannot remove.
-- **Extension: institution-custodied tokenized blue-chips / RWAs** (equities, treasuries) on a permissioned/institutional
-  venue, where custody is regulated and the hedge is listed equity/rates options. This rides the tokenized-collateral
-  thesis and keeps the collateral adverse-selection-safe by construction (permissioned issuance), at the cost of a
-  permissioned venue.
+- **External hedges are partial and separate.** A hedge in native BTC or ETH, or in a related listed instrument, may
+  reduce selected market-price exposure. It is external to Bivium and depends on the chosen instrument, venue,
+  sizing, margin, liquidity, execution, and counterparty; it need not track the delivered collateral token exactly.
+- **Representation and redemption risks remain.** Bivium settles in the configured EVM token. A hedge referencing
+  native BTC, ETH, or another external asset does not hedge the token's custody or issuer risk, bridge or federation
+  assumptions, challenge-window risk, peg-out or redemption delay, token-to-reference basis, liquidity gaps, or
+  hedge-counterparty risk. Wrapper designs redistribute these assumptions; none should be treated as eliminating
+  them.
+- **Long-tail, borrower-controlled, and tokenized collateral require separate diligence.** Limited markets, mutable or
+  permissioned issuance, and reliance on custodians, issuers, redemption processes, or trading venues can add
+  adverse-selection, basis, liquidity, and counterparty exposure. The existence of an external hedge or permissioned
+  issuance does not make collateral safe by itself.
 
-Assets with no deep options market to hedge, or that the borrower can mint/rig, must stay bespoke/off-grid and are the
-participant's explicit risk.
+Assets that a borrower can mint or rig, or for which participants cannot independently assess liquidity and
+representation, remain a bespoke risk borne by those participants.
 
 ## Assurance scope at the pinned source revision
 

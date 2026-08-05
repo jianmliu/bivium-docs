@@ -25,7 +25,7 @@ Explain that maturity establishes a repayment cutoff and comparable term. Define
 
 - [ ] **Step 3: Explain the shared Offer model and price discovery**
 
-Describe Borrow, Lend, Buy, and Sell as movements of the same market claim through signed offers. Explain that `tick` encodes price, APR is derived for display, and neither the core nor a displayed APR guarantees fair pricing or liquidity.
+Describe Borrow, Lend, Buy, and Sell as movements of the same market claim through ratified offers. Explain that the current Preview uses signed quotes specifically, without implying that every Offer, ratifier, or action is intrinsically signed. Explain that `tick` encodes price, APR is derived for display, and neither the core nor a displayed APR guarantees fair pricing or liquidity.
 
 - [ ] **Step 4: Derive repay-or-deliver settlement**
 
@@ -145,4 +145,4 @@ git diff --stat origin/main..HEAD
 git status --short --branch
 ```
 
-Expected: only the design, plan, new article, README, and SUMMARY changes are present; the worktree is clean after commits.
+Expected: only the design, plan, new article, README, SUMMARY, and intentional `security.md` source-alignment cleanup are present; the worktree is clean after commits.

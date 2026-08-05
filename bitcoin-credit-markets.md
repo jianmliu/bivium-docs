@@ -26,17 +26,18 @@ neither the term nor the collateral guarantees that outcome.
 
 ## Standardized credit has a narrow domain
 
-In Bivium, DCN is fungible credit only within one exact market identity. That domain is:
-`chainId`, `bivium` (the core contract address), `loanToken`, `collateralToken`,
-`maturity`, `strike`,
-`allowPartialRepay`, and `gate`.
+In Bivium, a dual-currency note (DCN) is fungible credit only within one exact market
+identity. That domain is: `chainId`, `bivium` (the core contract address), `loanToken`,
+`collateralToken`, `maturity`, `strike`, `allowPartialRepay`, and `gate`.
 
 Every field matters. A change to the chain or core deployment changes the domain; so
-does a change to either token, maturity, strike, repayment policy, or access rule. DCN
-is therefore not a general claim on a borrower and is never portable across those
-domains. Within one exact domain it represents the same market-level settlement claim,
-which is what makes transfer and comparison possible without pretending that unlike
-credit is interchangeable.
+does a change to either token, maturity, strike, repayment policy, or gate address. The
+`gate` field is a domain-bound access-policy address, or zero for unrestricted access;
+when non-zero, that address may also expose lifecycle hooks for debt origination and
+repayment. DCN is therefore not a general claim on a borrower and is never portable
+across those domains. Within one exact domain it represents the same market-level
+settlement claim, which is what makes transfer and comparison possible without
+pretending that unlike credit is interchangeable.
 
 ## One claim, one Offer model
 
@@ -50,21 +51,27 @@ the same Offer and fill model:
 
 The offer carries a `tick`, which encodes price on the core's grid. The interface can
 derive an APR from that price for display, but APR is not an independent on-chain term.
-The immutable core does not set a rate. It checks the submitted market domain,
-ratification result, capacity, maturity, and other execution conditions. A displayed
-APR does not establish fair value, available liquidity, or a likely settlement result.
-Those depend on actual quotes, counterparties, market terms, and conditions at
-execution.
+The immutable core does not set a rate. It checks the submitted market domain, the
+maker-authorized ratifier and its result, offer timing and capacity, and the lifecycle
+conditions applicable to the fill. New debt issuance is permitted only before maturity;
+a fill that purely transfers existing credit can remain possible at or after maturity,
+subject to offer timing, available credit and liquidity as applicable, authorization,
+gate policy, and the other execution checks. A displayed APR does not establish fair
+value, available liquidity, or a likely settlement result. Those depend on actual
+quotes, counterparties, market terms, and conditions at execution.
 
-This separation is deliberate. Configured ratifiers authorize offers. A
-signature-based ratifier verifies a maker signature over the offer commitment, while
-another configured on-chain ratifier can attest policy without a maker signature. In the
-current Development Preview, signed quotes can be used for offer discovery, but signing
-is not a universal property of an Offer or of ratification. Market participants or
-configured quote authorities make economically consequential pricing choices; the core
-runs no signature scheme. A relayer can help participants discover offers, but discovery
-is not execution: the core rechecks the submitted domain, ratification result, capacity,
-maturity, and other execution conditions on-chain.
+This separation is deliberate. A maker authorizes a ratifier, and the core delegates
+offer ratification to that contract. A signature-based ratifier verifies a maker
+signature over the offer commitment, while another configured on-chain ratifier can
+attest policy without a maker signature. In the current Development Preview, signed
+quotes can be used for offer discovery, but signing is not a universal property of an
+Offer or of ratification. The core does not implement offer-signature verification; it
+does separately verify EIP-712 signed authorization grants, which can confer scoped or
+full operator authority, including fund-moving capabilities. Market participants or
+configured quote authorities make economically consequential pricing choices. A
+relayer can help participants discover offers, but discovery is not execution: the core
+rechecks the submitted domain, maker authorization of the ratifier, ratification result,
+offer timing and capacity, and the lifecycle conditions applicable to that fill.
 
 ## Repay or deliver
 
@@ -100,8 +107,14 @@ Other material risks include:
 - the authority and scope of any signer or other quote authority;
 - relayer liveness, censorship, delay, or ranking of discovered offers;
 - correct validation of the exact market domain before acting;
+- gate policy and any cached lifecycle hooks, which can revert or make external calls;
 - token behavior and the assumptions required of each configured token; and
 - smart-contract, integration, authorization, and interface risk.
+
+The core invokes `beforeTake`, `afterTake`, `beforeRepay`, and `afterRepay` when the
+domain's gate advertised hook support at the market's first touch. The reentrancy guard
+and core accounting checks constrain that surface, but they do not eliminate
+external-call, integration, or origination-and-repayment liveness risk.
 
 The [Security guide](security.md) explains these boundaries in greater depth, including
 the distinction between a quote authority's economic influence and direct custody
