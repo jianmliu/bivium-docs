@@ -19,7 +19,7 @@ Every action is the same operation — move `units` of the claim for `units × p
 - **Sell / buy on the secondary** = transfer an existing claim between holders.
 
 Because of this, lending, borrowing, and secondary trading all run through one order type (an *offer*)
-and one settlement call (a *fill*). The only thing that distinguishes borrowing is that the seller's
+and one execution call (a *fill*). The only thing that distinguishes borrowing is that the seller's
 position crosses below zero into debt — which is the single point where collateral is escrowed.
 
 ## Repay-or-deliver settlement (no oracle, no liquidation)
@@ -63,8 +63,8 @@ The complete flat `Offer` is `chainId`, `bivium`, `loanToken`, `collateralToken`
 and `ratifier`, in that order. Its eight-field prefix is the market identity. `tick` encodes the price
 on the core's grid; there is no separate price field. The full tuple is always hashed as the ratification
 commitment, so changing any field, including the chain or core, changes it. Signature-based ratifiers
-verify a maker signature over that commitment; manager, curve, and other on-chain ratifiers can attest
-their policy without a maker signature.
+verify a maker signature over that commitment; other configured on-chain ratifiers can attest their
+policy without a maker signature.
 
 Bivium markets focus on liquid, blue-chip collateral — **BTC and ETH** — because that collateral is deep
 and the risk is straightforward to price and hedge. The settlement window aligns to the standard
@@ -77,13 +77,9 @@ Price is expressed on a **logistic tick grid** and shown to you as an APR. Each 
 par; the maximum tick is pinned to par. Every order, human or automated, lands on the same ladder, so
 quotes are directly comparable.
 
-How a given market's rate is *justified* is pluggable, without changing the core:
-
-- **Signed quotes (RFQ / order book).** A lender (or a market-maker quoting on their behalf) signs an
-  offer at a chosen rate; a borrower fills it.
-- **An optional on-chain curve.** When explicitly configured and funded, a pool can quote a rate as a
-  function of utilization. The stable app configuration disables this lane and uses signed CLOB offers,
-  with RFQ/intents available when configured; a curve is not guaranteed liquidity.
+In the Development Preview, rates come from **signed quotes** in the order book or configured RFQ/intent
+lane. A lender, or a market maker quoting on their behalf, signs an offer at a chosen rate and a
+borrower fills it.
 
 In every case the rate is one number — read as a tick, an APR, or an upfront premium — and the immutable
 core simply checks that a fill respects it. The core never sets prices and holds no special pricing power.
@@ -97,9 +93,9 @@ commitment; that only describes the old signature and is not evidence that the o
 the current core. A missing or wrong domain prevents new-core execution.
 
 Positions also do not migrate between cores. A legacy read-and-exit path must remain available until
-old positions settle; this documentation does not claim that such a UI is live. A legacy Sepolia
-deployment may exist, but the fresh domain-bound release described here has not been deployed or
-promoted to production.
+old positions complete; this documentation does not claim that such a UI is live. The current
+Development Preview exposes the domain-bound frontend for testing, but it is unaudited and has not been
+promoted to production. No contract addresses are published here.
 
 ## Trust model in one paragraph
 
