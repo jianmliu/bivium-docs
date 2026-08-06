@@ -1,122 +1,145 @@
-# Using Bivium — a walkthrough
+# Using Bivium — step by step
 
-Bivium is **non-recourse, fixed-rate, no-liquidation** lending. You post BTC or ETH as collateral, draw
-USDC, and may repay strictly before maturity to reclaim the collateral. From maturity onward repayment
-is closed; unpaid debt contributes collateral to market settlement. There is no liquidation engine or
-margin call.
+Bivium is fixed-rate, fixed-term, non-recourse lending with no price-triggered liquidation. This guide
+covers only workflows enabled in the current **[Development Preview](https://dev.bivium.pages.dev)**.
+An active market and an executable quote are required for Borrow or Lend; appearing in the market list
+does not guarantee liquidity.
 
-The current **[Development Preview](https://dev.bivium.pages.dev)** has two experiences over the same
-configured markets and signed orders:
-
-- **Basic** provides guided **Markets** and **Portfolio** screens.
-- **Pro** provides a single **Trade** workspace with the book, chart, order ticket, and positions tape.
-
-This guide documents only features enabled in the Development Preview. For the underlying mechanics,
-see the [protocol overview](protocol-overview.md).
+For lifecycle questions, see the [FAQ](faq.md). For the underlying mechanics, see the
+[protocol overview](protocol-overview.md).
 
 ---
 
-## 0. Verify the Preview, then connect
+## 1. Before you start
 
-1. Open the **[Bivium Development Preview](https://dev.bivium.pages.dev)**.
-2. **Check the Header before approving or signing.** Its deployment identity shows the environment,
-   chain, shortened Bivium core address, and release digest prefix. Confirm they match the environment
-   you intended to use. A familiar token pair or market name is not enough: every market and offer
-   belongs to one exact chain and core.
-3. **Choose Basic or Pro**, connect your wallet, and confirm that its network matches the displayed
-   chain.
-4. Use only test assets supplied for the selected Development environment.
+You need a wallet connected to the Sepolia test network and the test assets required by the selected
+market. Use test assets only.
 
-The Preview is a test frontend for an unaudited release. It is not production, this guide publishes no
-contract addresses, and it must not be used with real funds.
+1. Open the **[Bivium Development Preview](https://dev.bivium.pages.dev)** in a browser that supports
+   your wallet.
+2. Check the Header before approving or signing. It shows the environment, chain, shortened Bivium core
+   address, and release digest prefix.
+3. Confirm the wallet network matches the displayed chain.
+4. Confirm the full market terms before every action. A familiar asset pair is not enough: a market and
+   its offers belong to one exact chain and core.
 
----
+The Preview is unaudited and non-production. This guide publishes no contract addresses and must not be
+used as authority for a deployment address.
 
-## 1. Basic — Markets
+## 2. Understand the market terms
 
-Open **Markets** to compare the series listed by the current deployment configuration. Each series is
-identified by its loan token, collateral token, strike, and maturity. Select a market to open its action
-dock:
+Each listed market has a specific set of terms:
 
-- **Borrow** fills the best executable signed maker bids for that exact market. Review the fixed APR,
-  proceeds, face owed, collateral, maturity, and strike before approving collateral and filling.
-- **Lend now** buys resting DCN credit from signed asks. The APR locks when the fill lands; you may sell
-  the DCN in Pro before maturity or hold it for repay-or-deliver settlement.
-- **Rate order** appears only when the RFQ/intent lane is configured. It lets a borrower name acceptable
-  terms for solvers to fill; signing an intent is not itself an executed loan.
+- **Loan token** — the asset the borrower receives and may use to repay, such as test USDC.
+- **Collateral token** — the represented BTC or ETH asset posted by the borrower. Its wrapper or issuer
+  has risks separate from Bivium.
+- **Strike / floor** — the fixed conversion boundary used to determine required collateral and physical
+  delivery exposure.
+- **Maturity** — the cutoff. New borrowing and repayment require a pre-maturity state; claims apply from
+  maturity onward.
+- **Face** — the fixed loan-token amount owed by the borrower.
+- **APR** — a display derived from the offer price and remaining term. It is not a protocol-set service
+  fee, a promise of liquidity, or a guaranteed return.
+- **Dual-currency note (DCN)** — fungible credit within that exact market domain. At maturity it claims a
+  pro-rata share of loan token from repaid debt and collateral token from unpaid debt.
 
-The signed order book is the default liquidity source, with RFQ/intents available only when configured.
-Before submitting an action, re-check the Header domain and full market terms. Repay the fixed face while
-`block.timestamp < maturity` to free collateral. At and after maturity, repayment is closed.
+## 3. Borrow
 
----
+Borrow is available only when the selected market is active and has an executable bid.
 
-## 2. Basic — Portfolio
+1. Open **Basic → Markets** and select the exact strike and maturity you intend to use.
+2. Choose **Borrow** and enter the desired amount.
+3. Review the fixed APR, proceeds, face owed, required collateral, strike, and maturity.
+4. If requested, approve only the collateral amount needed for the action.
+5. Submit **Borrow** and review the wallet transaction before confirming it.
+6. After confirmation, open **Portfolio** and verify the new **Loan** row.
 
-**Portfolio** is a unified tape of the connected account's enabled commitments and activity:
+If the market is matured, has no executable quote, or fails domain validation, do not submit an
+alternative transaction based only on a matching asset symbol.
 
-- **Loan** rows show debt, locked or reclaimable collateral, lifecycle state, and the available Repay or
-  Reclaim action.
-- **DCN** rows show fungible market credit and expose Claim from maturity onward for a pro-rata share of
-  loan tokens from repaid debt and collateral from unpaid debt.
-- **Order** rows show the remaining size of signed bids or asks after on-chain consumption and allow
-  cancellation.
+## 4. View and manage a Loan
 
-Portfolio reads the bounded list of markets configured for the Preview. This lets it inspect known
-markets even when automatic discovery is unavailable, while preventing data from an unvalidated market
-domain from being treated as safe.
+In **Portfolio**, a Loan row shows:
 
-The summary reports debt or delivered face, collateral locked, and resting orders. If the relayer is
-unavailable, the order count may be shown as `unknown`. If required market configuration or domain
-validation fails, Portfolio shows an unavailable state and Retry action. An unavailable view is **not**
-an empty account: retry and independently verify on-chain state before concluding that a commitment is
-absent.
+- debt or delivered face;
+- locked or reclaimable collateral;
+- strike and maturity;
+- current lifecycle state;
+- the contextual action currently allowed.
 
-### Claiming matured DCN
+Portfolio uses the bounded market list configured for the Preview. If required configuration cannot be
+validated, it shows an unavailable state rather than treating the account as empty.
 
-When a DCN can be claimed, its action area shows **Estimated proceeds** before the Claim transaction:
+## 5. Repay and reclaim collateral
 
-- the loan-token row estimates the holder's share contributed by debt repaid before maturity;
-- the collateral-token row estimates the holder's share contributed by debt left unpaid at maturity.
+Repayment is allowed strictly before maturity. At and after maturity, repayment is closed.
 
-The preview is read from current contract state and refreshes while the page is open. It is an estimate,
-not a guaranteed execution result; the transaction uses the state available when it executes. If the
-estimate cannot be loaded, do not infer that the claim is worth zero. Retry or verify the claim directly
-before submitting.
+1. Open the Loan row in **Portfolio** and confirm it is still repayable.
+2. If requested, approve the required loan token.
+3. Select **Repay**, review the fixed face, and confirm the transaction in the wallet.
+4. When collateral is shown as reclaimable and **Reclaim** is available, submit that separate action.
+5. Verify the updated Loan state after confirmation.
 
----
+Do not assume that the availability of a button remains unchanged while a wallet confirmation is open;
+the app checks current chain time and lifecycle conditions again before submission where applicable.
 
-## 3. Pro — Trade
+## 6. Lend and receive DCN
 
-Switch to **Pro** for the exchange workspace. Choose the exact configured market, then use the unified
-signed book to take liquidity or rest a limit order. Bids and asks use one tick grid: `tick` encodes the
-price and APR is derived for display. Pro also includes the enabled Loan, DCN, and Order position tape
-used by Portfolio.
+Lend now is available only when an active market has an executable ask.
 
-A relayer can hide, delay, or mis-rank discovery, but it does not hold user funds. The core re-checks
-the offer, market domain, capacity, and other execution conditions on-chain.
+1. Open **Basic → Markets** and select the exact market.
+2. Choose **Lend now** and enter the desired amount.
+3. Review the offer price, displayed APR, term, strike, and DCN face.
+4. Approve the loan token if requested, then submit the fill and confirm it in the wallet.
+5. Open **Portfolio** and verify the **DCN** row.
 
----
+DCN is a physically settled market claim, not a savings balance or guaranteed-yield product. Holding it
+can result in receiving collateral token at maturity.
 
-## Migration and legacy positions
+## 7. Trade and manage Orders in Pro
 
-Legacy signatures are not converted into new offers. Positions created on an older core remain on that
-core and require a compatible legacy interface until completion. Do not assume a position migrated
-because another app release shows the same assets, strike, and maturity.
+Switch to **Pro** for the order book, chart, order ticket, and shared positions tape.
 
-## Key terms
+1. Select the exact configured market.
+2. Take available liquidity or place an order when the corresponding order control is enabled.
+3. Review `tick`-derived price and APR, size, side, expiry, and market before signing.
+4. Check the **Order** row in the positions tape or Portfolio.
+5. Use **Cancel** to consume the remaining on-chain capacity of a resting order; the app also attempts to
+   remove it from relayer discovery.
 
-- **Floor / strike** — the price at which collateral is delivered or assigned.
-- **Maturity** — the fixed cutoff. Repayment and new borrowing require `block.timestamp < maturity`;
-  claims apply from `block.timestamp >= maturity`.
-- **Rate / APR / tick** — the fixed borrowing cost or lending yield. The offer carries a `tick`, not a
-  free-form price field.
-- **DCN** — fungible market credit that claims a pro-rata share of the market's two-token settlement.
-- **No liquidation** — there is no maintenance margin or liquidator; settlement occurs at maturity.
+Existing credit may remain transferable after maturity when offer timing, available credit, and all
+other execution conditions allow. This does not guarantee a quote, counterparty, or post-maturity exit.
 
-## Learn more
+## 8. Claim matured DCN
 
-- **[Protocol overview](protocol-overview.md)** — markets, offers, and repay-or-deliver settlement.
-- **[Security guide](security.md)** — domain checks, trust model, lender risk, and token assumptions.
+From maturity onward, a DCN row may expose **Claim**.
 
-> Development Preview and unaudited software. Verify the Header and do not use real funds.
+1. Review **Estimated proceeds** in the action area.
+2. Check the loan-token estimate, which represents the holder's share of debt repaid before maturity.
+3. Check the collateral-token estimate, which represents the holder's share of collateral delivered by
+   unpaid debt.
+4. Submit **Claim** and confirm the transaction in the wallet.
+5. Verify the received assets and updated DCN balance after confirmation.
+
+Estimated proceeds use current contract state and refresh while the page is open. They are not a
+guarantee: final amounts use the state when the transaction executes. If the preview cannot be loaded,
+treat the result as unknown rather than zero.
+
+## 9. Understand unavailable states
+
+- **Matured market** — new borrowing is closed. Claims may be available to DCN holders.
+- **No executable quote** — the market may be configured but currently has no fillable bid or ask.
+- **Relayer unavailable** — order discovery, ranking, or cancellation delisting may be delayed. The
+  relayer does not hold core funds, and the core still checks execution conditions.
+- **Portfolio unavailable** — required market configuration or domain validation failed. Retry and
+  independently verify on-chain state; this is not evidence that the account has no commitments.
+- **Resting orders unknown** — if relayer reads fail, do not infer that a signed order disappeared.
+
+## 10. Continue learning
+
+- **[FAQ](faq.md)** — repayment, DCN, claims, data availability, and release limitations.
+- **[Protocol overview](protocol-overview.md)** — market identity, offers, and repay-or-deliver settlement.
+- **[Security](security.md)** — authorization, collateral, token, wrapper, and unaudited-code risks.
+
+> Development Preview and unaudited software. Verify the Header, use test assets only, and confirm every
+> wallet transaction yourself.
