@@ -23,6 +23,9 @@ The same market has two sides:
   limitations.
 - **[Bitcoin credit markets](bitcoin-credit-markets.md)** — design rationale for explicit, fixed terms,
   standardized DCN, market pricing, and repay-or-deliver settlement.
+- **[Option-backed fixed-rate lending](option-backed-fixed-rate-lending.md)** — how Bivium restricts
+  the P/N decomposition by keeping the redemption leg with the borrower, turning an option primitive
+  into non-recourse fixed-rate lending, and how that model could map to an Aave v4 Spoke.
 - **[Protocol overview](protocol-overview.md)** — how the core works: the offer model, repay-or-deliver
   settlement, why there's no oracle and no liquidation, and how rates are set.
 - **[Security](security.md)** — trust model, what to understand before lending, and token assumptions.

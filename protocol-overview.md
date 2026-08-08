@@ -50,6 +50,12 @@ quoted rate is not pure option premium: it can include time value, compensation 
 risk, liquidity conditions, and maker spread. A higher displayed rate alone does not establish a
 monotonic probability of collateral delivery.
 
+Another useful interpretation decomposes the posted collateral into a protected **P-like credit leg**
+and a residual **N-like redemption leg**. Bivium simplifies the broader P/N model by letting the credit
+leg circulate while the borrower keeps the redemption leg instead of selling it independently. See
+**[Option-backed fixed-rate lending](option-backed-fixed-rate-lending.md)** for the economic mapping and
+the proposed Aave v4 Spoke boundary.
+
 ## Markets
 
 A market's identity is exactly eight fields: `chainId`, `bivium` (the core contract address),
