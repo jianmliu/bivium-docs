@@ -103,6 +103,11 @@ old positions complete; this documentation does not claim that such a UI is live
 Development Preview exposes the domain-bound frontend for testing, but it is unaudited and has not been
 promoted to production. No contract addresses are published here.
 
+The multi-loan Sepolia candidate keeps the six-field Core market identity unchanged. Mock GHO and Mock
+USDC select different markets and accounting domains; Manager pools are bound to one explicit loan-token
+and collateral-token pair, while RFQ-only markets do not imply Manager liquidity. Mock GHO is the
+candidate default, not production GHO and not an assertion that Bivium's P/N interpretation is GHO.
+
 ## Trust model in one paragraph
 
 The core is **immutable** (no protocol administrator, pause, or upgrade), has **no oracle** (settlement reads

@@ -86,6 +86,10 @@ No. The Preview is an unaudited, non-production test environment. Use Sepolia te
 the Header domain, and confirm every wallet transaction yourself. No contract address published by an
 unverified source should be treated as authoritative.
 
+Mock GHO and Mock USDC in the multi-loan Sepolia candidate are separate, valueless test assets. The
+borrowed token address is part of the market identity, so repayment must use that original loan token;
+matching dollar-like names or symbols are not interchangeable.
+
 ## 14. Are offers and positions from an older core migrated?
 
 No. The chain-and-core-bound format does not convert legacy signatures or move positions between core

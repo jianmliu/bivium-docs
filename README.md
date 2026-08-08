@@ -10,9 +10,9 @@ was repaid, never a price feed.
 
 The same market has two sides:
 
-- **Borrowers** post BTC/ETH and draw USDC. They get downside-protected financing that can never be
+- **Borrowers** post BTC/ETH and draw the selected market's loan token. They get downside-protected financing that can never be
   liquidated.
-- **Lenders** supply USDC and hold fungible market credit. At maturity, holders claim a pro-rata share of
+- **Lenders** supply that same loan token and hold fungible market credit. At maturity, holders claim a pro-rata share of
   loan tokens contributed by repaid debt and collateral contributed by unpaid debt.
 
 ## Where to start
@@ -35,6 +35,11 @@ The same market has two sides:
 The current test interface is the **[Bivium Development Preview](https://dev.bivium.pages.dev)**. This
 documentation covers only the workflows enabled in that Preview. Features or code paths that are not
 enabled there are outside this guide.
+
+The next Sepolia candidate adds **Mock GHO** as its default loan token while retaining **Mock USDC** in
+separate markets. Both are valueless test assets, and every position must be repaid in the exact token
+it borrowed. This candidate is not part of the public Preview until its real-Sepolia maturity run and
+byte-identical promotion are recorded.
 
 > Bivium is an unaudited proof of concept. The Development Preview is not a production deployment,
 > publishes no contract addresses here, and must not be used with real funds.

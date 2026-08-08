@@ -30,7 +30,8 @@ used as authority for a deployment address.
 
 Each listed market has a specific set of terms:
 
-- **Loan token** — the asset the borrower receives and may use to repay, such as test USDC.
+- **Loan token** — the asset the borrower receives and must use to repay. The multi-loan Sepolia
+  candidate uses Mock GHO by default and also lists separate Mock USDC markets; neither token has value.
 - **Collateral token** — the represented BTC or ETH asset posted by the borrower. Its wrapper or issuer
   has risks separate from Bivium.
 - **Strike / floor** — the fixed conversion boundary used to determine required collateral and physical
@@ -92,6 +93,10 @@ Lend now is available only when an active market has an executable ask.
 3. Review the offer price, displayed APR, term, strike, and DCN face.
 4. Approve the loan token if requested, then submit the fill and confirm it in the wallet.
 5. Open **Portfolio** and verify the **DCN** row.
+
+Changing markets can also change the loan token. Re-check its symbol and address before approving,
+borrowing, repaying, depositing, or claiming. A GHO-denominated position cannot be repaid with USDC,
+and a USDC-denominated position cannot be repaid with GHO.
 
 DCN is a physically settled market claim, not a savings balance or guaranteed-yield product. Holding it
 can result in receiving collateral token at maturity.
