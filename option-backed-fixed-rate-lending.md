@@ -10,6 +10,8 @@ fixed-maturity, non-recourse borrowing rather than an options trading interface.
 
 > This page gives an economic interpretation of the current protocol and then describes a possible
 > Aave v4 integration. It does not introduce a new Core interface, token, oracle, or settlement rule.
+> The `bpGHO` material below is a non-committed research proposal. It is not implemented, audited,
+> approved by Aave governance, or part of the Development Preview.
 
 ## The P/N decomposition
 
@@ -145,6 +147,31 @@ The proposed Spoke must not represent the borrower's position as ordinary Aave v
 Hub debt is an unconditional obligation to restore the borrowed asset, whereas the Bivium borrower may
 choose not to repay and surrender the collateral instead.
 
+### Position Manager and Spoke are complementary
+
+An Aave v4 Position Manager and a custom Bivium Spoke solve different problems. They are not competing
+integration choices.
+
+- A **Position Manager** is the user-authorized execution layer. It can coordinate account actions,
+  source maker liquidity just in time, fill a Bivium offer, repay, roll, or redeem. It does not change
+  the risk or settlement rules of the Aave market it operates through.
+- A **Bivium Spoke** would be the protocol accounting and risk layer. It would define fixed-term
+  markets, collateral escrow, strike and maturity constraints, repay-or-deliver settlement, exposure
+  caps, and its relationship to a Hub.
+
+A possible stack is therefore:
+
+```text
+user account / delegated smart account
+        -> Bivium Position Manager
+        -> proposed Bivium fixed-term Spoke
+        -> Aave v4 Hub, only for assets and obligations the Hub explicitly supports
+```
+
+The manager requires user authorization; connecting a custom Spoke to a Hub and granting it risk
+capacity requires Aave governance and appropriate risk configuration. A Position Manager alone cannot
+turn collateral delivery into valid repayment of ordinary Hub debt.
+
 ### GHO's role
 
 GHO is a natural loan, quote, and settlement token for such a Spoke:
@@ -174,6 +201,109 @@ Using a shared Hub credit line would transfer BTC or ETH tail risk to Hub liquid
 separate first-loss layer guaranteed restoration in GHO. Such a credit line is a possible later risk
 product, not a requirement for the fixed-term Spoke and not part of the current protocol.
 
+## Research proposal: a rolling `bpGHO` asset
+
+One possible later integration is a rolling portfolio asset, provisionally called `bpGHO`. The name is
+only shorthand for a Bivium P portfolio denominated in GHO; it must not imply a GHO peg, a GHO guarantee,
+or endorsement by Aave.
+
+`bpGHO` would be a floating-NAV share in a managed portfolio that may hold:
+
+- GHO cash awaiting deployment or redemption;
+- fungible Bivium P-like credits across approved strikes and maturities;
+- BTC or ETH received when borrowers deliver collateral instead of repaying; and
+- explicit liabilities and accrued execution costs.
+
+Every P-like credit is a market-tradable, fixed-maturity claim identified by its exact Bivium market.
+It resembles a physically settled, defaultable zero-coupon bond: it can be sold before maturity, but its
+terminal proceeds may be loan tokens, collateral, or both. It is not a risk-free single-currency ZCB.
+
+### Relationship to the original P/N construction
+
+In the conceptual option-backed index, one unit of collateral is split at maturity between P and N:
+
+```text
+P(T) = min(1, S(T) / K) units of collateral
+N(T) = max(0, 1 - S(T) / K) units of collateral
+P(T) + N(T) = 1 unit of collateral
+```
+
+Both claims settle in collateral; the oracle determines their quantities. Bivium instead keeps N with
+the borrower as a non-transferable repayment credential and gives P a contractual loan-token face value
+subject to physical collateral delivery. If the borrower repays, P receives the loan token. If the
+borrower does not repay, P participates in the delivered collateral basket.
+
+This difference matters after a price recovery. In the conceptual split, value above the strike belongs
+to N. In Bivium, a borrower can still decline to repay when collateral is above the strike, in which case
+the full posted collateral enters settlement and P may receive more value than its loan-token face value.
+That outcome is possible because Bivium models borrower choice and pooled delivery rather than an
+oracle-exercised P/N split.
+
+### Dual-currency holdings and exits
+
+The portfolio would not need to liquidate delivered BTC or ETH immediately. It could remain
+dual-currency and roll other proceeds into new P series. Conversion to a single currency can be added at
+the withdrawing user's boundary rather than forced on every holder at each maturity.
+
+Three exit modes are possible:
+
+1. **Secondary sale:** the holder sells `bpGHO` at the prevailing market price.
+2. **Basket redemption:** the holder receives a pro-rata basket of GHO, P-like credits, and delivered
+   BTC or ETH.
+3. **GHO-only redemption:** the strategy sells the withdrawing holder's pro-rata non-GHO assets and
+   returns the realized GHO, with that holder bearing execution costs, slippage, and any delay.
+
+The third mode does not make the portfolio single-currency internally. It adds an execution layer at
+claim time. A design must state whether redemptions are immediate, queued, auctioned, or subject to
+liquidity gates; promising unconditional par redemption would be incompatible with the underlying
+assets.
+
+### NAV and market price
+
+An indicative accounting NAV could be expressed as:
+
+```text
+NAV = GHO cash
+    + sum(marked value of each P series)
+    + marked value of delivered BTC and ETH
+    - liabilities and accrued costs
+```
+
+The protocol would also need a conservative liquidation NAV using liquidity haircuts, stale-price
+rules, and executable prices. The secondary-market price of `bpGHO` may trade above or below either NAV.
+NAV is a valuation reference, not a price guarantee; reliable convergence requires usable mint,
+redemption, or arbitrage paths.
+
+### Potential Aave placement
+
+`bpGHO` should be treated as a separate, risk-bearing asset category, never as ordinary GHO and never as
+an implicit liability of GHO suppliers. Possible research paths, from narrowest to most ambitious, are:
+
+1. a maker-funded JIT Position Manager that uses no Hub credit;
+2. a capped custom Spoke with an explicit first-loss or GHO-restoration layer;
+3. a separately risk-profiled strategy allocation, such as a future reinvestment module;
+4. registration of `bpGHO` as a floating-NAV Hub asset or collateral type with dedicated caps and
+   haircuts.
+
+Changing Hub accounting so that a GHO obligation can be restored directly with an arbitrary BTC/ETH/P
+basket would be a materially different protocol design, not a routine Spoke integration.
+
+### Research risks and prerequisites
+
+Any prototype would need, at minimum:
+
+- caps by collateral, strike, maturity, market, and total delivered-collateral ratio;
+- minimum GHO liquidity buffers and explicit redemption queues or gates;
+- robust marking for thin, stale, or concentrated P markets;
+- limits on maturity clustering and correlated BTC/ETH exposure;
+- transparent accounting and liquidation NAVs;
+- controls for manager authority, execution slippage, and rollover failure; and
+- a legal, governance, oracle, audit, and economic review before any Aave-facing deployment.
+
+The research sequence should therefore start with maker-funded JIT execution, collect settlement and
+secondary-liquidity evidence, and only then evaluate whether a bounded Spoke or portfolio allocation is
+appropriate.
+
 ## Product summary
 
 Bivium applies one decisive restriction to the broader P/N model: **P can circulate, while N remains
@@ -187,4 +317,5 @@ into an accessible lending flow:
 - no price oracle or mid-term liquidation is required by the Core.
 
 This is the conceptual bridge from an option-backed index primitive to an Aave-aligned fixed-rate
-lending product.
+lending product. The proposed `bpGHO` portfolio is a possible higher-layer use of those claims, not a
+change to that product or to Bivium Core.

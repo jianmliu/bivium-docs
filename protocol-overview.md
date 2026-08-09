@@ -56,6 +56,13 @@ leg circulate while the borrower keeps the redemption leg instead of selling it 
 **[Option-backed fixed-rate lending](option-backed-fixed-rate-lending.md)** for the economic mapping and
 the proposed Aave v4 Spoke boundary.
 
+That page also records a non-committed research direction for a rolling `bpGHO` portfolio that could
+hold GHO, tradable P-like claims, and delivered BTC or ETH. `bpGHO` is not a stablecoin, is not pegged
+one-for-one to GHO, and is not an implemented or governance-approved Aave product. Its value would be a
+floating portfolio NAV, while its market price could trade above or below that NAV. Any Aave integration
+would require a separately risk-profiled manager, Spoke, or strategy allocation rather than silently
+placing dual-currency settlement risk on ordinary GHO suppliers.
+
 ## Markets
 
 A market's identity is exactly eight fields: `chainId`, `bivium` (the core contract address),
