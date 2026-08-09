@@ -19,6 +19,8 @@ The same market has two sides:
 
 - **[Using the app](using-the-app.md)** — a walkthrough of Basic Markets and Portfolio, plus the Pro
   Trade workspace.
+- **[Command-line interface](cli.md)** — the scriptable client for developers and operators: the
+  full market lifecycle, DCN secondary trading, and the safety rules it enforces.
 - **[FAQ](faq.md)** — repayment and claim rules, DCN, data availability, and Development Preview
   limitations.
 - **[Bitcoin credit markets](bitcoin-credit-markets.md)** — design rationale for explicit, fixed terms,
