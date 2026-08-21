@@ -193,6 +193,60 @@ arrangements independently:
 Assets that a borrower can mint or rig, or for which participants cannot independently assess liquidity and
 representation, remain a bespoke risk borne by those participants.
 
+## Whole-vault markets: additional trust surface
+
+A market whose collateral is a whole Bitcoin vault does not change the core's properties — it is still
+immutable, oracle-free, and free of liquidation. It does add periphery that a participant must assess
+separately: an application that binds vaults to loans, a conversion escrow, an external vault registry,
+and a keeper set. See **[Bitcoin vault markets](bitcoin-vault-markets.md)** for the mechanics.
+
+### What each token's guarantee covers
+
+- **vaultBTC** is not transferable and is not an asset to hold. Its holder's guarantee is that the vault
+  it points at can be reclaimed to the depositor's own Bitcoin key once the bound debt is settled. The
+  redemption itself is the registry's process, on the registry's timeline.
+- **TBVBTC** is an ordinary transferable ERC-20 whose guarantee is that the **claim** persists: escrowed
+  redemption orders stay backed and are cancellable after their deadline, the token remains transferable
+  and usable as collateral, and a vault's original depositor may buy it back while it is unsettled.
+  **Turning that claim into native bitcoin is not part of the guarantee** — it depends on a keeper
+  front-paying and, in a production deployment, on payment verification.
+
+### The keeper set and payment verification
+
+Delivered vaults are redeemed to a registered keeper's Bitcoin key, and redemption orders are filled by
+registered keepers. Two properties bound what a keeper can do:
+
+- **Settlement is an equal-value exchange.** Settling a delivered vault burns the keeper's own claim of
+  the same size, so a compromised keeper key risks that keeper's float rather than another party's
+  position.
+- **Filling is only as strong as verification.** When payment verification is enabled, a fill must prove
+  the bitcoin payment on-chain. When it is **disabled — the Development Preview's configuration** — a
+  fill is an assertion, and keepers, together with whoever may append one, are effectively trusted
+  custodians of the redemption escrows they are versioned to fill. A production deployment must enable a
+  verifier. Orders record the keeper set as it stood when they were posted, so a keeper added later
+  cannot reach escrows that predate it.
+
+### Timing and granularity limits
+
+- **Buy-back depends on settlement having been claimed.** A defaulted vault's collateral reaches the
+  conversion escrow only as credit holders claim it. Until enough has been claimed, a buy-back or a
+  keeper settlement of that size is refused as "not yet". A credit holder who never claims can therefore
+  delay another participant's buy-back; no assets are lost in the meantime.
+- **Whole-vault exactness meets pro-rata claims.** Settlement pays credit holders pro rata, while vaults
+  are settled or bought back in whole units. Credit that is never claimed — dust, a lost key, a holder
+  who declines to act — leaves the pool short by that amount, which prevents the *last* delivered vault
+  from being settled or bought back until the remainder is claimed. Terminal settleability of the pool
+  therefore assumes credit is fully claimed.
+- **Availability of a keeper is a liveness property, not a safety one.** If no keeper acts, escrowed
+  orders are cancellable and vaults remain unconsumed; what is lost is speed, not the claim.
+
+### The registry is external
+
+Peg-in, peg-out, redemption timing, key management, and Bitcoin-side finality belong to the vault
+registry and its own trust assumptions, not to Bivium. In the Development Preview the registry is a
+permissionless stand-in — which is exactly why it can serve as a faucet — and no native bitcoin moves in
+any lane. Nothing about the Preview's behaviour should be read as a claim about a production registry.
+
 ## Assurance scope at the pinned source revision
 
 These statements describe Bivium core revision

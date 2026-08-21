@@ -90,7 +90,34 @@ Mock GHO and Mock USDC in the multi-loan Sepolia candidate are separate, valuele
 borrowed token address is part of the market identity, so repayment must use that original loan token;
 matching dollar-like names or symbols are not interchangeable.
 
-## 14. Are offers and positions from an older core migrated?
+## 14. What is a whole-vault market, and why can't I type an amount?
+
+Its collateral is an indivisible Bitcoin vault, so the vault's size fixes the loan's face rather than the
+other way round. You select vaults; the panel derives the face. A single borrow also fills exactly one
+lender quote rather than sweeping the book, so a vault whose face exceeds the best resting bid cannot be
+borrowed against. See [Bitcoin vault markets](bitcoin-vault-markets.md).
+
+## 15. What is the difference between vaultBTC and TBVBTC?
+
+`vaultBTC` represents one specific vault and is **not transferable** — it is an internal credential that
+moves only along the vault lifecycle's own lanes, and its holder can reclaim that exact vault. `TBVBTC`
+is an ordinary transferable ERC-20 representing a share of the pool of vaults on the keeper side; it is
+what the collateral leg of settlement pays, what its own market takes as collateral, and what the
+redemption book escrows.
+
+Converting a vault to TBVBTC exchanges a claim on *your* vault for a claim on the pool. While no keeper
+has settled the vault, the original depositor can reverse it with an equal amount of TBVBTC — including
+for a vault delivered by default.
+
+## 16. If I hold TBVBTC, am I guaranteed native bitcoin?
+
+No. What the protocol can ensure is that the **claim** does not disappear: escrowed redemption orders
+remain backed and are cancellable after their deadline, the token stays transferable and usable as
+collateral, and the vault's original depositor can buy it back while it is unsettled. Converting that
+claim into bitcoin requires a keeper to front-pay and, on mainnet, payment verification. In the
+Development Preview no bitcoin moves at all and fills are simulated. See [Security](security.md).
+
+## 17. Are offers and positions from an older core migrated?
 
 No. The chain-and-core-bound format does not convert legacy signatures or move positions between core
 deployments. Older positions remain associated with their original core and require a compatible legacy
@@ -99,5 +126,6 @@ read-and-exit path until their lifecycle completes.
 ### Learn more
 
 - **[Using the app](using-the-app.md)** — Borrow, Lend, Portfolio, Pro, Repay, and Claim steps.
+- **[Bitcoin vault markets](bitcoin-vault-markets.md)** — whole-vault collateral and the two tokens.
 - **[Protocol overview](protocol-overview.md)** — market identity, pricing, and settlement mechanics.
 - **[Security](security.md)** — trust boundaries and asset assumptions.
