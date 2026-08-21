@@ -83,6 +83,21 @@ Bivium markets focus on liquid, blue-chip collateral — **BTC and ETH** — bec
 and the risk is straightforward to price and hedge. The settlement window aligns to the standard
 08:00 UTC options expiry.
 
+### Execution paths
+
+Market identity says *what* a market is; it does not say how collateral reaches the core. Two paths exist:
+
+- **Ordinary collateral** — a divisible ERC-20 that the borrower escrows directly. The borrow sweeps the
+  book best-first for the size requested.
+- **Whole Bitcoin vaults** — collateral that is an indivisible vault held by an external registry. The
+  vault's size fixes the loan's face, collateral can only enter through the application that binds the
+  vault to the loan, and one borrow fills exactly one lender quote. Settlement of unpaid debt pays a
+  fungible pool claim rather than the vault itself.
+
+The core is unchanged in both: the same eight-field identity, the same offers and fills, the same
+repay-or-deliver settlement. The difference lives entirely in the periphery that escrows the collateral.
+See **[Bitcoin vault markets](bitcoin-vault-markets.md)**.
+
 ## How rates are set
 
 Price is expressed on a **logistic tick grid** and shown to you as an APR. Each tick moves by a fixed

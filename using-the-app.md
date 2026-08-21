@@ -130,7 +130,46 @@ Estimated proceeds use current contract state and refresh while the page is open
 guarantee: final amounts use the state when the transaction executes. If the preview cannot be loaded,
 treat the result as unknown rather than zero.
 
-## 9. Understand unavailable states
+## 9. Borrow against a whole Bitcoin vault
+
+Some markets take a **whole Bitcoin vault** as collateral instead of a divisible token. There is no
+amount to type: the vault's size fixes the loan's face. Read
+[Bitcoin vault markets](bitcoin-vault-markets.md) before using one.
+
+**Get a vault.** In the Preview, use **Get Mock Vault** in the faucet bar and enter a size. Keep it
+small: one borrow fills exactly one lender quote, so a vault whose face exceeds the best resting bid
+cannot be borrowed against at all.
+
+**Borrow.**
+
+1. Open **Basic → Markets** and select the vault market.
+2. In **Borrow**, tick the vaults to pledge. The panel derives the face and shows the covering quote.
+3. Approve the vaults, then grant the vault app its fill capability if prompted (once per account).
+4. Submit, then verify the **Loan** row in **Portfolio**.
+
+If the panel reports that no single bid covers the face, use a smaller vault or wait for depth. Do not
+look for a workaround in Pro: new borrowing in a vault market is available only in this panel.
+
+**Repay and choose what happens next.**
+
+1. Repay from the Loan row, strictly before maturity, as in section 5.
+2. Select **Release vault** on the Loan row. It withdraws the collateral and then clears the group
+   binding; both steps must complete before the vault is usable again.
+3. The vault is now idle in the **Whole-lot vaults** card, with three options: borrow again, **Reclaim
+   vault** (hand it back to the registry for redemption to the depositor's BTC key), or **Convert →
+   TBVBTC**.
+
+**Convert and buy back.** Convert locks the vault and mints you an equal amount of TBVBTC — an ordinary
+ERC-20 you can trade or use as collateral in its own market. **Buy back with TBVBTC** reverses it while
+no keeper has settled the vault, including for a vault delivered by default. Confirm you hold the full
+amount before submitting; any TBVBTC works, since the pool is interchangeable.
+
+**Exit to native bitcoin.** TBVBTC holders can post a redemption order: escrow the amount, set a
+destination and a decaying ask, and a keeper pays first and claims the escrow after. An unfilled order
+is cancellable after its deadline. In the Preview no bitcoin moves and fills are simulated — the card
+labels this.
+
+## 10. Understand unavailable states
 
 - **Matured market** — new borrowing is closed. Claims may be available to DCN holders.
 - **No executable quote** — the market may be configured but currently has no fillable bid or ask.
@@ -140,9 +179,11 @@ treat the result as unknown rather than zero.
   independently verify on-chain state; this is not evidence that the account has no commitments.
 - **Resting orders unknown** — if relayer reads fail, do not infer that a signed order disappeared.
 
-## 10. Continue learning
+## 11. Continue learning
 
 - **[FAQ](faq.md)** — repayment, DCN, claims, data availability, and release limitations.
+- **[Bitcoin vault markets](bitcoin-vault-markets.md)** — whole-vault collateral, `vaultBTC`, `TBVBTC`,
+  and the two routes back to native bitcoin.
 - **[Protocol overview](protocol-overview.md)** — market identity, offers, and repay-or-deliver settlement.
 - **[Security](security.md)** — authorization, collateral, token, wrapper, and unaudited-code risks.
 
