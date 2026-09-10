@@ -7,8 +7,8 @@ developers, market operators, and automated acceptance runs — everything the w
 protocol layer, scriptable from a terminal.
 
 The CLI shares the protocol's status: it targets test deployments only, is unaudited, and must not
-be used with real funds. It is a client, not a service — it holds no funds, runs no server, and
-signs only with a key you provide locally.
+be used with real funds. The CLI holds no funds and signs only with a key you provide locally. For agent access through a
+separate server that prepares unsigned transactions, see [MCP for agents](mcp.md).
 
 ## Deployment profiles
 
